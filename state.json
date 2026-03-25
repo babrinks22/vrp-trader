@@ -1,0 +1,16 @@
+{
+  "slots": {
+    "A": {
+      "position": null,
+      "next_entry": null
+    },
+    "B": {
+      "position": null,
+      "next_entry": "2026-03-27"
+    }
+  },
+  "spy_shares": 95,
+  "initial_capital": 100000.0,
+  "cumulative_pnl": 0.0,
+  "trade_count": 0
+}
