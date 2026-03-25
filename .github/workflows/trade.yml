@@ -1,1 +1,38 @@
+name: VRP Daily Trade
 
+on:
+  schedule:
+    # 9:45 AM ET = 13:45 UTC (adjust to 14:45 UTC during daylight saving)
+    - cron: '45 13 * * 1-5'
+  workflow_dispatch:   # allows manual trigger from GitHub UI
+
+jobs:
+  trade:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install alpaca-py yfinance numpy pandas scipy
+
+      - name: Run trader
+        env:
+          ALPACA_API_KEY: ${{ secrets.ALPACA_API_KEY }}
+          ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
+          ALPACA_PAPER: "true"
+        run: python vrp_live_trader.py
+
+      - name: Commit updated state and logs
+        run: |
+          git config user.name "vrp-bot"
+          git config user.email "bot@vrptrader.com"
+          git add state.json trade_log.csv vrp_trader.log || true
+          git diff --staged --quiet || git commit -m "state: $(date '+%Y-%m-%d')"
+          git push
