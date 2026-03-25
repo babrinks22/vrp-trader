@@ -1,0 +1,22 @@
+2026-03-25 17:38:06,394  INFO  ============================================================
+2026-03-25 17:38:06,394  INFO  VRP Live Trader — 2026-03-25  PAPER
+2026-03-25 17:38:06,394  INFO  ============================================================
+2026-03-25 17:38:06,698  INFO  Portfolio value: $99,848.65  Paper
+2026-03-25 17:38:06,698  INFO  Computing regime...
+2026-03-25 17:38:07,517  INFO    Trend=bearish  Vol=low  ATR=expanding  →  skewed_put
+2026-03-25 17:38:07,517  INFO    IWM=$252.13  VIX=25.4  HV=22.5%  IV=26.5%
+2026-03-25 17:38:07,517  INFO  Managing open positions...
+2026-03-25 17:38:07,517  INFO    Slot A: no open position
+2026-03-25 17:38:07,518  INFO    Slot B: no open position
+2026-03-25 17:38:07,518  INFO  Checking for entry opportunities...
+2026-03-25 17:38:07,518  INFO    Slot A: entering skewed_put  regime=bearish+low+expanding  target_expiry=2026-04-08
+2026-03-25 17:38:08,376  INFO    Order submitted: b60c0f5f-dcac-4696-bcfb-3549718a4cdd  limit=$2.61  qty=10
+2026-03-25 17:38:08,379  INFO    Slot A: opened skewed_put  10 contracts  credit=$2.61  max_loss=$8.39
+2026-03-25 17:38:08,379  INFO    Slot B: gated until 2026-03-27
+2026-03-25 17:38:08,379  INFO  Checking SPY allocation...
+2026-03-25 17:38:08,603  INFO  State saved.
+2026-03-25 17:38:08,603  INFO  ────────────────────────────────────────────────────────────
+2026-03-25 17:38:08,603  INFO    Slot A: OPEN — skewed_put  10 contracts  DTE=12  credit=$2.61
+2026-03-25 17:38:08,603  INFO    Slot B: EMPTY  next entry: 2026-03-27
+2026-03-25 17:38:08,603  INFO    SPY shares: 95
+2026-03-25 17:38:08,603  INFO  Done.

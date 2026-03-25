@@ -1,7 +1,31 @@
 {
   "slots": {
     "A": {
-      "position": null,
+      "position": {
+        "entry_date": "2026-03-25",
+        "expiry": "2026-04-06",
+        "spread": "skewed_put",
+        "trend_regime": "bearish",
+        "vol_regime": "low",
+        "atr_regime": "expanding",
+        "contracts": 10,
+        "credit_received": 2.61,
+        "max_loss": 8.39,
+        "leg_symbols": [
+          "IWM260406P00242000",
+          "IWM260406P00231000",
+          "IWM260406C00264000",
+          "IWM260406C00272000"
+        ],
+        "leg_sides": [
+          true,
+          false,
+          true,
+          false
+        ],
+        "order_id": "b60c0f5f-dcac-4696-bcfb-3549718a4cdd",
+        "underlying_px": 252.13499450683594
+      },
       "next_entry": null
     },
     "B": {
