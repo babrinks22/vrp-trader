@@ -77,8 +77,12 @@ PAPER      = os.environ.get("ALPACA_PAPER", "true").lower() != "false"
 
 CONFIG = {
     # ── Portfolio allocation ──────────────────────────────────
-    "spy_weight":      0.60,   # 60% SPY buy-and-hold
-    "slot_risk":       0.20,   # 20% per IWM options slot
+    # No SPY — all-options portfolio
+    # IWM: 17.5% per slot × 2 slots = 35%
+    # XBI: 22.5% per slot × 2 slots = 45%
+    # Cash reserve: 20% (buffer + future XLE allocation)
+    "iwm_slot_risk":   0.175,  # 17.5% per slot  (84% of half-Kelly)
+    "xbi_slot_risk":   0.225,  # 22.5% per slot  (62% of half-Kelly)
 
     # ── Options parameters ────────────────────────────────────
     "slot_dte":        14,     # target DTE at entry
@@ -190,11 +194,12 @@ def load_state() -> dict:
             return json.load(f)
     return {
         "slots": {
-            "A": {"position": None, "next_entry": None},
-            "B": {"position": None, "next_entry": None},
+            "IWM_A": {"position": None, "next_entry": None},
+            "IWM_B": {"position": None, "next_entry": None},
+            "XBI_A": {"position": None, "next_entry": None},
+            "XBI_B": {"position": None, "next_entry": None},
         },
-        "spy_shares":     0.0,
-        "initial_capital": None,     # set on first run
+        "initial_capital": None,
         "cumulative_pnl":  0.0,
         "trade_count":     0,
     }
@@ -240,24 +245,25 @@ def find_strike_by_delta(S, r, sigma, T, target_delta, option_type="put"):
 #  REGIME DETECTION
 # ══════════════════════════════════════════════════════════════
 
-def get_regime(cfg: dict) -> dict:
+def get_regime(cfg: dict, ticker: str = "IWM") -> dict:
     """
-    Download recent IWM and VIX data via yfinance and compute
-    the same regime signals as the backtest.
-    Returns: {"trend", "vol", "atr", "hv", "spread_chosen"}
+    Compute regime signals for the given ticker (IWM or XBI).
+    XBI uses the same equity regime map — biotech follows risk-on/off
+    cycles driven by the same VIX and SMA signals as small-caps.
+    Returns: {"trend", "vol", "atr", "hv", "iv", "vix", "price", "spread"}
     """
     lookback_days = cfg["ivr_lookback"] + 60
     end   = datetime.today()
     start = end - timedelta(days=lookback_days * 1.5)
 
-    iwm = yf.download("IWM",  start=start, end=end,
-                      auto_adjust=True, progress=False)["Close"].squeeze()
+    underlying = yf.download(ticker, start=start, end=end,
+                             auto_adjust=True, progress=False)["Close"].squeeze()
     vix = yf.download("^VIX", start=start, end=end,
                       auto_adjust=True, progress=False)["Close"].squeeze()
 
     # Align
-    df = pd.DataFrame({"iwm": iwm, "vix": vix}).ffill().dropna()
-    px  = df["iwm"]
+    df = pd.DataFrame({"px": underlying, "vix": vix}).ffill().dropna()
+    px  = df["px"]
     vix = df["vix"]
 
     lr       = np.log(px / px.shift(1))
@@ -439,30 +445,37 @@ def close_position_by_legs(trade_client, position_state: dict) -> bool:
 #  POSITION SIZING
 # ══════════════════════════════════════════════════════════════
 
-def compute_contracts(portfolio_value: float, max_loss_per_spread: float) -> int:
+def compute_contracts(portfolio_value: float, max_loss_per_spread: float,
+                      slot_risk: float = None) -> int:
     """
     Number of contracts such that max_loss * contracts * 100
     = slot_risk * portfolio_value
+    slot_risk defaults to iwm_slot_risk if not specified.
     """
     if max_loss_per_spread <= 0:
         return 0
-    budget = portfolio_value * CONFIG["slot_risk"]
+    risk = slot_risk if slot_risk else CONFIG["iwm_slot_risk"]
+    budget = portfolio_value * risk
     n = int(budget / (max_loss_per_spread * 100))
     return max(1, min(n, 10))   # hard cap at 10 contracts
 
 
 # ══════════════════════════════════════════════════════════════
-#  SPY ALLOCATION MANAGER
+#  SPY ALLOCATION MANAGER — REMOVED
+#  Portfolio is now 100% options (IWM + XBI) with 20% cash buffer.
+#  SPY buy-and-hold replaced by higher-edge options on two tickers.
 # ══════════════════════════════════════════════════════════════
 
 def manage_spy_allocation(trade_client, data_client, state: dict,
                           portfolio_value: float):
+    """Stub — SPY allocation removed. All capital deployed in IWM+XBI options."""
+    return  # no-op
     """
     Ensure ~60% of portfolio is in SPY.
     On first run: buys the initial SPY position.
     Subsequent runs: rebalances if >5% off target.
     """
-    target_value = portfolio_value * CONFIG["spy_weight"]
+    target_value = portfolio_value * 0.60   # legacy reference, function is no-op
 
     # Always read actual SPY shares from Alpaca — never trust state.json alone.
     # Prevents double-buying when state.json is stale between runs.
@@ -676,11 +689,15 @@ def is_market_open() -> bool:
 
 def enter_slot(trade_client, opt_data_client, slot_id: str,
                slot_state: dict, regime: dict,
-               portfolio_value: float, today: date) -> dict:
+               portfolio_value: float, today: date,
+               ticker: str = "IWM",
+               cfg_override: dict = None) -> dict:
     """
     Open a new options position in this slot based on current regime.
-    Only enters during market hours — options credit is unreliable otherwise.
+    ticker: underlying ETF (IWM or XBI)
+    cfg_override: allows per-slot risk_pct to differ from CONFIG
     """
+    cfg = cfg_override if cfg_override else CONFIG
     # Check gate
     next_entry = slot_state.get("next_entry")
     if next_entry and date.fromisoformat(next_entry) > today:
@@ -692,14 +709,15 @@ def enter_slot(trade_client, opt_data_client, slot_id: str,
         log.info(f"  Slot {slot_id}: market closed — skipping entry, will retry next run")
         return slot_state
 
-    # Safety: count IWM option legs already open in Alpaca.
-    # Prevents doubling up if state.json was stale between two simultaneous runs.
+    # Safety: count already-open option legs for this ticker.
+    # Prevents doubling if state.json was stale between simultaneous runs.
     try:
         open_positions = trade_client.get_all_positions()
-        iwm_legs = sum(1 for p in open_positions
-                       if p.symbol.startswith("IWM") and len(p.symbol) > 3)
-        if iwm_legs >= 8:
-            log.warning(f"  Slot {slot_id}: {iwm_legs} IWM option legs already open — skipping")
+        ticker_legs = sum(1 for p in open_positions
+                         if p.symbol.startswith(ticker) and len(p.symbol) > len(ticker))
+        max_legs = 8   # 2 slots × 4 legs per condor
+        if ticker_legs >= max_legs:
+            log.warning(f"  Slot {slot_id}: {ticker_legs} {ticker} legs open already — skipping")
             return slot_state
     except Exception:
         pass
@@ -708,7 +726,7 @@ def enter_slot(trade_client, opt_data_client, slot_id: str,
     params      = SPREAD_PARAMS[spread_name]
     S           = regime["price"]
     iv          = regime["iv"]
-    T           = CONFIG["slot_dte"] / 365
+    T           = (cfg if cfg_override else CONFIG)["slot_dte"] / 365
 
     target_expiry = today + timedelta(days=CONFIG["slot_dte"])
     log.info(f"  Slot {slot_id}: entering {spread_name}  "
@@ -722,9 +740,9 @@ def enter_slot(trade_client, opt_data_client, slot_id: str,
     put_long_target = put_short_target - put_width
 
     # ── Look up contracts ─────────────────────────────────────
-    short_put = find_contract(trade_client, opt_data_client, "IWM", "put",
+    short_put = find_contract(trade_client, opt_data_client, ticker, "put",
                               params["put_delta"], put_short_target, target_expiry)
-    long_put  = find_contract(trade_client, opt_data_client, "IWM", "put",
+    long_put  = find_contract(trade_client, opt_data_client, ticker, "put",
                               params["put_delta"] * 0.5, put_long_target, target_expiry)
 
     if not short_put or not long_put:
@@ -747,9 +765,9 @@ def enter_slot(trade_client, opt_data_client, slot_id: str,
             S, CONFIG["r"], iv, T, params["call_delta"], "call")
         call_long_target = call_short_target + call_width
 
-        short_call = find_contract(trade_client, opt_data_client, "IWM", "call",
+        short_call = find_contract(trade_client, opt_data_client, ticker, "call",
                                    params["call_delta"], call_short_target, target_expiry)
-        long_call  = find_contract(trade_client, opt_data_client, "IWM", "call",
+        long_call  = find_contract(trade_client, opt_data_client, ticker, "call",
                                    params["call_delta"] * 0.5, call_long_target, target_expiry)
 
         if short_call and long_call:
@@ -769,7 +787,8 @@ def enter_slot(trade_client, opt_data_client, slot_id: str,
 
     # ── Size ──────────────────────────────────────────────────
     max_loss   = put_width - net_credit
-    contracts  = compute_contracts(portfolio_value, max_loss)
+    contracts  = compute_contracts(portfolio_value, max_loss,
+                                   slot_risk=(cfg_override or CONFIG).get("risk_pct"))
     if contracts < 1:
         log.warning(f"  Slot {slot_id}: insufficient capital for 1 contract")
         return slot_state
@@ -851,28 +870,36 @@ def run():
         state["initial_capital"] = portfolio_value
         log.info(f"First run — initial capital set to ${portfolio_value:,.2f}")
 
-    # ── Slot B gate: stagger 7 days after Slot A ──────────────
-    slot_a_state = state["slots"]["A"]
-    slot_b_state = state["slots"]["B"]
+    # ── Slot configuration ────────────────────────────────────
+    # 4 slots: IWM_A, IWM_B (17.5% each), XBI_A, XBI_B (22.5% each)
+    # Each ticker's B slot is staggered 7 days after its A slot.
+    TICKER_SLOTS = [
+        ("IWM_A", "IWM", CONFIG["iwm_slot_risk"]),
+        ("IWM_B", "IWM", CONFIG["iwm_slot_risk"]),
+        ("XBI_A", "XBI", CONFIG["xbi_slot_risk"]),
+        ("XBI_B", "XBI", CONFIG["xbi_slot_risk"]),
+    ]
+    # Gate B slots on first run
+    for _sid, _tkr, _ in TICKER_SLOTS:
+        slot_st = state["slots"][_sid]
+        if _sid.endswith("_B") and slot_st.get("next_entry") is None and slot_st.get("position") is None:
+            gate = (today + timedelta(days=CONFIG["stagger_days"])).isoformat()
+            slot_st["next_entry"] = gate
+            log.info(f"Slot {_sid} ({_tkr}) first entry gated to {gate}")
 
-    # If Slot B has never been opened, set gate to today + stagger
-    if (slot_b_state.get("next_entry") is None and
-            slot_b_state.get("position") is None):
-        slot_b_start = (today + timedelta(days=CONFIG["stagger_days"])).isoformat()
-        slot_b_state["next_entry"] = slot_b_start
-        log.info(f"Slot B first entry gated to {slot_b_start}")
-
-    # ── Regime detection ──────────────────────────────────────
-    log.info("Computing regime...")
-    regime = get_regime(CONFIG)
-    log.info(f"  Trend={regime['trend']}  Vol={regime['vol']}  "
-             f"ATR={regime['atr']}  →  {regime['spread']}")
-    log.info(f"  IWM=${regime['price']:.2f}  VIX={regime['vix']:.1f}  "
-             f"HV={regime['hv']*100:.1f}%  IV={regime['iv']*100:.1f}%")
+    # ── Regime detection (one per ticker) ────────────────────
+    log.info("Computing regimes...")
+    regimes = {}
+    for ticker in ["IWM", "XBI"]:
+        r = get_regime(CONFIG, ticker)
+        regimes[ticker] = r
+        log.info(f"  {ticker}: Trend={r['trend']}  Vol={r['vol']}  ATR={r['atr']}  → {r['spread']}")
+        log.info(f"    ${r['price']:.2f}  VIX={r['vix']:.1f}  HV={r['hv']*100:.1f}%")
 
     # ── Manage open positions ─────────────────────────────────
     log.info("Managing open positions...")
-    for slot_id, slot_st in [("A", slot_a_state), ("B", slot_b_state)]:
+    for slot_id, ticker, slot_risk in TICKER_SLOTS:
+        slot_st = state["slots"][slot_id]
         if slot_st.get("position"):
             updated = manage_slot(trade_client, opt_data,
                                   slot_id, slot_st, portfolio_value, today)
@@ -880,18 +907,20 @@ def run():
         else:
             log.info(f"  Slot {slot_id}: no open position")
 
-    # ── Open new positions where slots are empty ──────────────
-    log.info("Checking for entry opportunities...")
-    for slot_id, slot_st in [("A", slot_a_state), ("B", slot_b_state)]:
+    # ── Open new positions ────────────────────────────────────
+    log.info("Checking entry opportunities...")
+    for slot_id, ticker, slot_risk in TICKER_SLOTS:
+        slot_st = state["slots"][slot_id]
         if slot_st.get("position") is None:
+            regime = regimes[ticker]
+            # Override risk_pct for this specific slot
+            cfg_override = {**CONFIG, "risk_pct": slot_risk}
             updated = enter_slot(trade_client, opt_data,
                                  slot_id, slot_st, regime,
-                                 portfolio_value, today)
+                                 portfolio_value, today,
+                                 ticker=ticker,
+                                 cfg_override=cfg_override)
             state["slots"][slot_id] = updated
-
-    # ── Manage SPY allocation ─────────────────────────────────
-    log.info("Checking SPY allocation...")
-    manage_spy_allocation(trade_client, stock_data, state, portfolio_value)
 
     # ── Save state ────────────────────────────────────────────
     save_state(state)
@@ -899,18 +928,20 @@ def run():
 
     # ── Summary ───────────────────────────────────────────────
     log.info("─" * 60)
-    for slot_id in ["A","B"]:
+    for slot_id, ticker, slot_risk in TICKER_SLOTS:
         pos = state["slots"][slot_id].get("position")
         if pos:
-            expiry = pos["expiry"]
-            dte = (date.fromisoformat(str(expiry)) - today).days
-            log.info(f"  Slot {slot_id}: OPEN — {pos['spread']}  "
-                     f"{pos['contracts']} contracts  DTE={dte}  "
-                     f"credit=${pos['credit_received']:.2f}")
+            try:
+                dte = (date.fromisoformat(str(pos["expiry"])) - today).days
+            except Exception:
+                dte = "?"
+            log.info(f"  Slot {slot_id} ({ticker} {slot_risk*100:.1f}%): OPEN — "
+                     f"{pos['spread']}  {pos['contracts']} contracts  "
+                     f"DTE={dte}  credit=${pos['credit_received']:.2f}")
         else:
             nxt = state["slots"][slot_id].get("next_entry","immediately")
-            log.info(f"  Slot {slot_id}: EMPTY  next entry: {nxt}")
-    log.info(f"  SPY shares: {state['spy_shares']:.0f}")
+            log.info(f"  Slot {slot_id} ({ticker} {slot_risk*100:.1f}%): EMPTY  next: {nxt}")
+    log.info(f"  Portfolio: ${portfolio_value:,.0f}  |  Cash reserve ~20%")
     log.info("Done.")
 
 
