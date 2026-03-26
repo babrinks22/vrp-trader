@@ -20,3 +20,29 @@
 2026-03-25 17:38:08,603  INFO    Slot B: EMPTY  next entry: 2026-03-27
 2026-03-25 17:38:08,603  INFO    SPY shares: 95
 2026-03-25 17:38:08,603  INFO  Done.
+2026-03-26 17:38:01,435  INFO  ============================================================
+2026-03-26 17:38:01,435  INFO  VRP Live Trader — 2026-03-26  PAPER
+2026-03-26 17:38:01,436  INFO  ============================================================
+2026-03-26 17:38:01,863  INFO  Portfolio value: $99,583.88  Paper
+2026-03-26 17:38:01,864  INFO  First run — initial capital set to $99,583.88
+2026-03-26 17:38:01,864  INFO  Slot B first entry gated to 2026-04-02
+2026-03-26 17:38:01,864  INFO  Computing regime...
+2026-03-26 17:38:02,588  INFO    Trend=bearish  Vol=mid  ATR=expanding  →  iron_condor
+2026-03-26 17:38:02,588  INFO    IWM=$248.53  VIX=27.7  HV=22.5%  IV=26.5%
+2026-03-26 17:38:02,588  INFO  Managing open positions...
+2026-03-26 17:38:02,588  INFO    Slot A: no open position
+2026-03-26 17:38:02,588  INFO    Slot B: no open position
+2026-03-26 17:38:02,588  INFO  Checking for entry opportunities...
+2026-03-26 17:38:02,601  INFO    Slot A: entering iron_condor  regime=bearish+mid+expanding  target_expiry=2026-04-09
+2026-03-26 17:38:03,065  INFO    Order submitted: 97b82e79-760d-46dd-a75d-43873151cd94  limit=$2.34  qty=10
+2026-03-26 17:38:03,068  INFO    Slot A: opened iron_condor  10 contracts  credit=$2.34  max_loss=$4.66
+2026-03-26 17:38:03,068  INFO    Slot B: gated until 2026-04-02
+2026-03-26 17:38:03,068  INFO  Checking SPY allocation...
+2026-03-26 17:38:03,081  INFO    SPY actual shares from Alpaca: 0
+2026-03-26 17:38:03,168  INFO    SPY initial buy: 92 shares @ ~$648.74
+2026-03-26 17:38:03,169  INFO  State saved.
+2026-03-26 17:38:03,169  INFO  ────────────────────────────────────────────────────────────
+2026-03-26 17:38:03,169  INFO    Slot A: OPEN — iron_condor  10 contracts  DTE=11  credit=$2.34
+2026-03-26 17:38:03,169  INFO    Slot B: EMPTY  next entry: 2026-04-02
+2026-03-26 17:38:03,169  INFO    SPY shares: 92
+2026-03-26 17:38:03,169  INFO  Done.
