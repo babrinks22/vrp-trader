@@ -1,40 +1,11 @@
 {
   "slots": {
-    "A": {
-      "position": {
-        "entry_date": "2026-03-26",
-        "expiry": "2026-04-06",
-        "spread": "iron_condor",
-        "trend_regime": "bearish",
-        "vol_regime": "mid",
-        "atr_regime": "expanding",
-        "contracts": 10,
-        "credit_received": 2.34,
-        "max_loss": 4.66,
-        "leg_symbols": [
-          "IWM260406P00239000",
-          "IWM260406P00232000",
-          "IWM260406C00260000",
-          "IWM260406C00267000"
-        ],
-        "leg_sides": [
-          true,
-          false,
-          true,
-          false
-        ],
-        "order_id": "97b82e79-760d-46dd-a75d-43873151cd94",
-        "underlying_px": 248.52999877929688
-      },
-      "next_entry": null
-    },
-    "B": {
-      "position": null,
-      "next_entry": "2026-04-02"
-    }
+    "IWM_A": {"position": null, "next_entry": null},
+    "IWM_B": {"position": null, "next_entry": null},
+    "XBI_A": {"position": null, "next_entry": null},
+    "XBI_B": {"position": null, "next_entry": null}
   },
-  "spy_shares": 92,
-  "initial_capital": 99583.88,
+  "initial_capital": null,
   "cumulative_pnl": 0.0,
   "trade_count": 0
 }
