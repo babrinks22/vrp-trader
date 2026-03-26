@@ -463,7 +463,23 @@ def manage_spy_allocation(trade_client, data_client, state: dict,
     Subsequent runs: rebalances if >5% off target.
     """
     target_value = portfolio_value * CONFIG["spy_weight"]
-    current_shares = state.get("spy_shares", 0.0)
+
+    # Always read actual SPY shares from Alpaca — never trust state.json alone.
+    # Prevents double-buying when state.json is stale between runs.
+    try:
+        positions = trade_client.get_all_positions()
+        actual_shares = 0.0
+        for pos in positions:
+            if pos.symbol == "SPY":
+                actual_shares = float(pos.qty)
+                break
+        state["spy_shares"] = actual_shares
+        log.info(f"  SPY actual shares from Alpaca: {actual_shares:.0f}")
+    except Exception as e:
+        log.warning(f"  Could not read SPY position from Alpaca: {e}")
+        actual_shares = state.get("spy_shares", 0.0)
+
+    current_shares = actual_shares
 
     # Get current SPY price — try quote first, fall back to last daily bar
     spy_price = 0.0
@@ -675,6 +691,18 @@ def enter_slot(trade_client, opt_data_client, slot_id: str,
     if not is_market_open():
         log.info(f"  Slot {slot_id}: market closed — skipping entry, will retry next run")
         return slot_state
+
+    # Safety: count IWM option legs already open in Alpaca.
+    # Prevents doubling up if state.json was stale between two simultaneous runs.
+    try:
+        open_positions = trade_client.get_all_positions()
+        iwm_legs = sum(1 for p in open_positions
+                       if p.symbol.startswith("IWM") and len(p.symbol) > 3)
+        if iwm_legs >= 8:
+            log.warning(f"  Slot {slot_id}: {iwm_legs} IWM option legs already open — skipping")
+            return slot_state
+    except Exception:
+        pass
 
     spread_name = regime["spread"]
     params      = SPREAD_PARAMS[spread_name]
