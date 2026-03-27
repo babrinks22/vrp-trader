@@ -216,6 +216,177 @@ def log_trade(record: dict):
     df.to_csv(path, mode="a", header=not path.exists(), index=False)
 
 
+def save_spread_diagram(slot_id: str, spread_name: str, legs_info: list,
+                        short_put: dict, long_put: dict,
+                        short_call: dict, long_call: dict,
+                        S: float, net_credit: float, max_loss: float,
+                        contracts: int, today: date, regime: dict,
+                        expiry_str: str):
+    """
+    Generate and save a spread payoff diagram as a PNG.
+    Saved to: diagrams/YYYY-MM-DD_SlotID_spread.png
+    Also appended to spread_log.csv for a running record.
+    """
+    try:
+        import matplotlib
+        matplotlib.use("Agg")   # no display needed
+        import matplotlib.pyplot as plt
+        import matplotlib.patches as mpatches
+        import numpy as np
+    except ImportError:
+        log.warning("  matplotlib not installed — skipping diagram (pip install matplotlib)")
+        return
+
+    # ── Collect all strikes ───────────────────────────────────
+    legs = []
+    for info, is_short, label in [
+        (short_put, True,  "Short Put"),
+        (long_put,  False, "Long Put"),
+        (short_call,True,  "Short Call"),
+        (long_call, False, "Long Call"),
+    ]:
+        if info:
+            legs.append({"strike": info["strike"], "type": info["type"],
+                         "is_short": is_short, "label": label,
+                         "mid": info.get("mid", 0)})
+
+    strikes = [l["strike"] for l in legs if l["strike"] > 0]
+    if not strikes:
+        log.warning("  No valid strikes — skipping diagram")
+        return
+
+    lo = min(strikes); hi = max(strikes)
+    pad = max((hi - lo) * 1.5, S * 0.12)
+    px_range = np.linspace(lo - pad, hi + pad, 500)
+
+    # ── P&L at expiry ─────────────────────────────────────────
+    def intrinsic(px, strike, opt_type):
+        if opt_type == "put":  return max(strike - px, 0)
+        if opt_type == "call": return max(px - strike, 0)
+        return 0.0
+
+    pnl = np.array([
+        (net_credit + sum(
+            (-intrinsic(px, l["strike"], l["type"]) if l["is_short"]
+             else  intrinsic(px, l["strike"], l["type"]))
+            for l in legs
+        )) * contracts * 100
+        for px in px_range
+    ])
+
+    # ── Plot ──────────────────────────────────────────────────
+    G = "#1D9E75"; R = "#E24B4A"; B = "#378ADD"; A = "#EF9F27"
+    fig, ax = plt.subplots(figsize=(9, 5))
+    fig.patch.set_facecolor("#0f1117")
+    ax.set_facecolor("#1a1d27")
+    for spine in ax.spines.values():
+        spine.set_color("#2d3150")
+    ax.tick_params(colors="#7b82a0")
+    ax.xaxis.label.set_color("#7b82a0")
+    ax.yaxis.label.set_color("#7b82a0")
+
+    # Fill profitable / loss zones
+    ax.fill_between(px_range, pnl, 0,
+                    where=pnl >= 0, alpha=0.18, color=G, linewidth=0)
+    ax.fill_between(px_range, pnl, 0,
+                    where=pnl < 0,  alpha=0.18, color=R, linewidth=0)
+
+    # Payoff line — colour by sign
+    for i in range(len(px_range)-1):
+        col = G if pnl[i] >= 0 else R
+        ax.plot(px_range[i:i+2], pnl[i:i+2], color=col, lw=2.2)
+
+    # Zero line
+    ax.axhline(0, color="#2d3150", lw=1.0, zorder=1)
+
+    # Current price line
+    ax.axvline(S, color=A, lw=1.5, ls="--", alpha=0.85, label=f"Entry ${S:.2f}")
+
+    # Strike markers
+    colors_map = {(True,"put"): R, (False,"put"): G,
+                  (True,"call"): R, (False,"call"): G}
+    for l in legs:
+        if l["strike"] <= 0: continue
+        c = colors_map.get((l["is_short"], l["type"]), "#888")
+        ax.axvline(l["strike"], color=c, lw=1.0, ls=":", alpha=0.7)
+        pnl_at_strike = float(np.interp(l["strike"], px_range, pnl))
+        ax.annotate(
+            f"{l['label']}\n${l['strike']:.0f}",
+            xy=(l["strike"], pnl_at_strike),
+            xytext=(0, 18 if l["is_short"] else -28),
+            textcoords="offset points",
+            ha="center", fontsize=7.5, color=c,
+            arrowprops=dict(arrowstyle="-", color=c, alpha=0.5, lw=0.8),
+        )
+
+    # Credit / max-loss labels
+    max_profit = net_credit * contracts * 100
+    max_loss_d = -max_loss   * contracts * 100
+    ax.axhline(max_profit, color=G, lw=0.8, ls=":", alpha=0.5)
+    ax.axhline(max_loss_d, color=R, lw=0.8, ls=":", alpha=0.5)
+    ax.text(px_range[-1], max_profit + abs(max_profit)*0.04,
+            f"Max profit ${max_profit:,.0f}", color=G,
+            fontsize=8, ha="right", va="bottom")
+    ax.text(px_range[-1], max_loss_d - abs(max_loss_d)*0.04,
+            f"Max loss  ${max_loss_d:,.0f}", color=R,
+            fontsize=8, ha="right", va="top")
+
+    # Labels
+    ax.set_xlabel("Underlying price at expiry", color="#7b82a0", fontsize=9)
+    ax.set_ylabel("P&L ($)", color="#7b82a0", fontsize=9)
+    ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"${x:.0f}"))
+    ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _:
+        f"${y:,.0f}" if y >= 0 else f"-${abs(y):,.0f}"))
+    ax.grid(True, color="#2d3150", linewidth=0.5, alpha=0.6)
+
+    spread_display = spread_name.replace("_", " ").title()
+    title = (f"Slot {slot_id} — {spread_display}  |  "
+             f"{regime['trend'].capitalize()}+{regime['vol']}  |  "
+             f"Credit ${net_credit:.4f}  ×  {contracts} contracts  |  "
+             f"Expires {expiry_str}")
+    ax.set_title(title, color="#e8eaf0", fontsize=9, pad=10)
+
+    ax.legend(fontsize=8, framealpha=0.2, labelcolor="#e8eaf0",
+              facecolor="#1a1d27", edgecolor="#2d3150")
+
+    # ── Save ──────────────────────────────────────────────────
+    diagrams_dir = Path("diagrams")
+    diagrams_dir.mkdir(exist_ok=True)
+    filename = f"{today.isoformat()}_{slot_id}_{spread_name}.png"
+    filepath = diagrams_dir / filename
+
+    fig.tight_layout()
+    fig.savefig(filepath, dpi=130, bbox_inches="tight",
+                facecolor=fig.get_facecolor())
+    plt.close(fig)
+    log.info(f"  Diagram saved: {filepath}")
+
+    # ── Append to spread_log.csv ───────────────────────────────
+    log_path = Path("spread_log.csv")
+    row = {
+        "date":          today.isoformat(),
+        "slot":          slot_id,
+        "spread":        spread_name,
+        "trend_regime":  regime["trend"],
+        "vol_regime":    regime["vol"],
+        "atr_regime":    regime["atr"],
+        "underlying_px": round(S, 2),
+        "net_credit":    round(net_credit, 4),
+        "max_loss":      round(max_loss, 4),
+        "contracts":     contracts,
+        "expiry":        expiry_str,
+        "diagram_file":  str(filepath),
+        "legs":          " | ".join(
+            f"{'S' if l['is_short'] else 'L'} {l['type']} ${l['strike']:.0f}"
+            for l in legs if l["strike"] > 0
+        ),
+    }
+    pd.DataFrame([row]).to_csv(
+        log_path, mode="a", header=not log_path.exists(), index=False
+    )
+    log.info(f"  Spread logged: spread_log.csv")
+
+
 # ══════════════════════════════════════════════════════════════
 #  BLACK-SCHOLES HELPERS (for strike selection)
 # ══════════════════════════════════════════════════════════════
@@ -836,6 +1007,27 @@ def enter_slot(trade_client, opt_data_client, slot_id: str,
         "underlying_px":  round(S, 2),
         "order_id":       order_id,
     })
+
+    # Save spread diagram + append to spread_log.csv
+    expiry_str = (short_put["expiry"].isoformat()
+                  if hasattr(short_put["expiry"], "isoformat")
+                  else str(short_put["expiry"]))
+    save_spread_diagram(
+        slot_id=slot_id,
+        spread_name=spread_name,
+        legs_info=legs_info,
+        short_put=short_put,
+        long_put=long_put,
+        short_call=short_call if params["call_delta"] > 0 else None,
+        long_call=long_call   if params["call_delta"] > 0 else None,
+        S=S,
+        net_credit=net_credit,
+        max_loss=max_loss,
+        contracts=contracts,
+        today=today,
+        regime=regime,
+        expiry_str=expiry_str,
+    )
 
     log.info(f"  Slot {slot_id}: opened {spread_name}  "
              f"{contracts} contracts  credit=${net_credit:.2f}  "
