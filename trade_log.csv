@@ -1,0 +1,3 @@
+date,action,slot,spread,trend,vol,atr,contracts,credit,max_loss,underlying_px,order_id
+2026-03-27,open,IWM_A,iron_condor,bearish,mid,expanding,10,2.405,4.595,244.34,fa7c5b90-90dd-4b71-8d95-9b7e9f5eb2be
+2026-03-27,open,XBI_A,iron_condor,bearish,mid,expanding,10,1.935,3.065,120.51,3009a403-d850-496e-a02d-86a975ca4e68

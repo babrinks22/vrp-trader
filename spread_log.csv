@@ -1,0 +1,3 @@
+date,slot,spread,trend_regime,vol_regime,atr_regime,underlying_px,net_credit,max_loss,contracts,expiry,diagram_file,legs
+2026-03-27,IWM_A,iron_condor,bearish,mid,expanding,244.34,2.405,4.595,10,2026-04-07,diagrams/2026-03-27_IWM_A_iron_condor.png,S put $235 | L put $228 | S call $256 | L call $263
+2026-03-27,XBI_A,iron_condor,bearish,mid,expanding,120.51,1.935,3.065,10,2026-04-10,diagrams/2026-03-27_XBI_A_iron_condor.png,S put $114 | L put $109 | S call $128 | L call $133

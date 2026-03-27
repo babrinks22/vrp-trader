@@ -46,3 +46,43 @@
 2026-03-26 17:38:03,169  INFO    Slot B: EMPTY  next entry: 2026-04-02
 2026-03-26 17:38:03,169  INFO    SPY shares: 92
 2026-03-26 17:38:03,169  INFO  Done.
+2026-03-27 16:38:53,683  INFO  ============================================================
+2026-03-27 16:38:53,683  INFO  VRP Live Trader — 2026-03-27  PAPER
+2026-03-27 16:38:53,683  INFO  ============================================================
+2026-03-27 16:38:53,893  INFO  Portfolio value: $99,021.51  Paper
+2026-03-27 16:38:53,893  INFO  First run — initial capital set to $99,021.51
+2026-03-27 16:38:53,893  INFO  Slot IWM_B (IWM) first entry gated to 2026-04-03
+2026-03-27 16:38:53,893  INFO  Slot XBI_B (XBI) first entry gated to 2026-04-03
+2026-03-27 16:38:53,893  INFO  Computing regimes...
+2026-03-27 16:38:54,828  INFO    IWM: Trend=bearish  Vol=mid  ATR=expanding  → iron_condor
+2026-03-27 16:38:54,828  INFO      $244.34  VIX=29.5  HV=22.5%
+2026-03-27 16:38:55,272  INFO    XBI: Trend=bearish  Vol=mid  ATR=expanding  → iron_condor
+2026-03-27 16:38:55,272  INFO      $120.51  VIX=29.5  HV=30.2%
+2026-03-27 16:38:55,272  INFO  Managing open positions...
+2026-03-27 16:38:55,272  INFO    Slot IWM_A: no open position
+2026-03-27 16:38:55,272  INFO    Slot IWM_B: no open position
+2026-03-27 16:38:55,272  INFO    Slot XBI_A: no open position
+2026-03-27 16:38:55,272  INFO    Slot XBI_B: no open position
+2026-03-27 16:38:55,272  INFO  Checking entry opportunities...
+2026-03-27 16:38:55,332  INFO    Slot IWM_A: entering iron_condor  regime=bearish+mid+expanding  target_expiry=2026-04-10
+2026-03-27 16:38:56,149  INFO    Order submitted: fa7c5b90-90dd-4b71-8d95-9b7e9f5eb2be  limit=$2.41  qty=10
+2026-03-27 16:38:58,262  INFO  Failed to extract font properties from /usr/share/fonts/truetype/noto/NotoColorEmoji.ttf: Can not load face (unknown file format; error code 0x2)
+2026-03-27 16:38:59,698  INFO  generated new fontManager
+2026-03-27 16:39:01,107  INFO    Diagram saved: diagrams/2026-03-27_IWM_A_iron_condor.png
+2026-03-27 16:39:01,110  INFO    Spread logged: spread_log.csv
+2026-03-27 16:39:01,110  INFO    Slot IWM_A: opened iron_condor  10 contracts  credit=$2.41  max_loss=$4.59
+2026-03-27 16:39:01,110  INFO    Slot IWM_B: gated until 2026-04-03
+2026-03-27 16:39:01,171  INFO    Slot XBI_A: entering iron_condor  regime=bearish+mid+expanding  target_expiry=2026-04-10
+2026-03-27 16:39:01,722  INFO    Order submitted: 3009a403-d850-496e-a02d-86a975ca4e68  limit=$1.93  qty=10
+2026-03-27 16:39:02,762  INFO    Diagram saved: diagrams/2026-03-27_XBI_A_iron_condor.png
+2026-03-27 16:39:02,764  INFO    Spread logged: spread_log.csv
+2026-03-27 16:39:02,764  INFO    Slot XBI_A: opened iron_condor  10 contracts  credit=$1.93  max_loss=$3.07
+2026-03-27 16:39:02,764  INFO    Slot XBI_B: gated until 2026-04-03
+2026-03-27 16:39:02,764  INFO  State saved.
+2026-03-27 16:39:02,765  INFO  ────────────────────────────────────────────────────────────
+2026-03-27 16:39:02,765  INFO    Slot IWM_A (IWM 17.5%): OPEN — iron_condor  10 contracts  DTE=11  credit=$2.40
+2026-03-27 16:39:02,765  INFO    Slot IWM_B (IWM 17.5%): EMPTY  next: 2026-04-03
+2026-03-27 16:39:02,765  INFO    Slot XBI_A (XBI 22.5%): OPEN — iron_condor  10 contracts  DTE=14  credit=$1.94
+2026-03-27 16:39:02,765  INFO    Slot XBI_B (XBI 22.5%): EMPTY  next: 2026-04-03
+2026-03-27 16:39:02,765  INFO    Portfolio: $99,022  |  Cash reserve ~20%
+2026-03-27 16:39:02,765  INFO  Done.
