@@ -4,10 +4,10 @@ on:
   schedule:
     # 9:45 AM ET = 13:45 UTC
     - cron: '45 13 * * 1-5'
-  workflow_dispatch:   # allows manual trigger from GitHub UI
+  workflow_dispatch:
 
 permissions:
-  contents: write      # allows the workflow to commit state.json back
+  contents: write
 
 jobs:
   trade:
@@ -23,7 +23,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install alpaca-py yfinance numpy pandas scipy
+        run: pip install alpaca-py yfinance numpy pandas scipy matplotlib
 
       - name: Run trader
         env:
@@ -32,12 +32,14 @@ jobs:
           ALPACA_PAPER: "true"
         run: python vrp_live_trader.py
 
-      - name: Commit updated state and logs
+      - name: Commit everything
         run: |
           git config user.name "vrp-bot"
           git config user.email "bot@vrptrader.com"
           git add state.json || true
           git add trade_log.csv || true
+          git add spread_log.csv || true
           git add vrp_trader.log || true
-          git diff --staged --quiet || git commit -m "state: $(date '+%Y-%m-%d')"
+          git add diagrams/ || true
+          git diff --staged --quiet || git commit -m "trade: $(date '+%Y-%m-%d')"
           git push
