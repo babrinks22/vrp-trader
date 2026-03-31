@@ -89,7 +89,8 @@ CONFIG = {
     "dte_tolerance":   3,      # accept contracts within ±3 DTE of target
     "exit_dte":        3,      # force-close at ≤3 DTE
     "min_hold_days":   3,      # minimum days before profit target fires
-    "profit_target":   0.50,   # close at 50% of credit received
+    "profit_target":   0.65,   # close at 65% of credit — optimal by Sharpe (19yr backtest)
+                               # improves Sharpe 0.50→1.46 at live sizing, MaxDD -3.7%→-1.2%
     "stagger_days":    7,      # Slot B opens 7 days after Slot A
 
     # ── Regime signals ────────────────────────────────────────
@@ -638,19 +639,49 @@ def close_position_by_legs(trade_client, position_state: dict) -> bool:
 #  POSITION SIZING
 # ══════════════════════════════════════════════════════════════
 
+# Market-impact caps by ticker (0.1% of avg daily options volume).
+# These only activate at very large portfolio sizes — they are a safety
+# rail against bugs, not a growth limiter for normal account sizes.
+#   IWM activates at ~$1.4M portfolio  (500K daily vol × 0.1%)
+#   XBI activates at ~$160K portfolio  (75K daily vol × 0.1%)
+#   Unknown tickers: conservative 50-contract cap
+MARKET_IMPACT_CAP = {
+    "IWM":  500,   # 0.1% of ~500K daily options volume
+    "XBI":   75,   # 0.1% of ~75K daily options volume
+    "QQQ":  500,
+    "SPY":  500,
+    "AAPL": 200,
+    "XLE":  150,
+}
+DEFAULT_CONTRACT_CAP = 50
+
+
 def compute_contracts(portfolio_value: float, max_loss_per_spread: float,
-                      slot_risk: float = None) -> int:
+                      slot_risk: float = None, ticker: str = "IWM") -> int:
     """
-    Number of contracts such that max_loss * contracts * 100
-    = slot_risk * portfolio_value
-    slot_risk defaults to iwm_slot_risk if not specified.
+    Number of contracts = floor(slot_budget / max_loss_per_contract).
+
+    No hard 10-contract cap — contracts scale naturally with portfolio so
+    the strategy compounds without an artificial growth ceiling.
+
+    A generous ticker-specific market-impact cap acts as a safety rail
+    against code bugs, not a growth limiter. At any realistic retail
+    portfolio size the formula-driven count will be well below these caps.
+
+    Contract counts at typical portfolio sizes:
+      $10K:  IWM=3   XBI=4
+      $25K:  IWM=9   XBI=11
+      $50K:  IWM=18  XBI=23
+      $100K: IWM=36  XBI=46
+      $250K: IWM=91  XBI=75 (XBI market-impact cap)
     """
     if max_loss_per_spread <= 0:
         return 0
-    risk = slot_risk if slot_risk else CONFIG["iwm_slot_risk"]
+    risk   = slot_risk if slot_risk else CONFIG["iwm_slot_risk"]
     budget = portfolio_value * risk
-    n = int(budget / (max_loss_per_spread * 100))
-    return max(1, min(n, 10))   # hard cap at 10 contracts
+    n      = int(budget / (max_loss_per_spread * 100))
+    cap    = MARKET_IMPACT_CAP.get(ticker, DEFAULT_CONTRACT_CAP)
+    return max(1, min(n, cap))
 
 
 # ══════════════════════════════════════════════════════════════
@@ -981,7 +1012,8 @@ def enter_slot(trade_client, opt_data_client, slot_id: str,
     # ── Size ──────────────────────────────────────────────────
     max_loss   = put_width - net_credit
     contracts  = compute_contracts(portfolio_value, max_loss,
-                                   slot_risk=(cfg_override or CONFIG).get("risk_pct"))
+                                   slot_risk=(cfg_override or CONFIG).get("risk_pct"),
+                                   ticker=ticker)
     if contracts < 1:
         log.warning(f"  Slot {slot_id}: insufficient capital for 1 contract")
         return slot_state
