@@ -111,3 +111,28 @@
 2026-03-30 16:43:20,717  INFO    Slot XBI_B (XBI 22.5%): EMPTY  next: 2026-04-03
 2026-03-30 16:43:20,717  INFO    Portfolio: $97,846  |  Cash reserve ~20%
 2026-03-30 16:43:20,717  INFO  Done.
+2026-03-31 16:44:12,593  INFO  ============================================================
+2026-03-31 16:44:12,593  INFO  VRP Live Trader — 2026-03-31  PAPER
+2026-03-31 16:44:12,594  INFO  ============================================================
+2026-03-31 16:44:12,655  INFO  Portfolio value: $96,489.24  Paper
+2026-03-31 16:44:12,656  INFO  Computing regimes...
+2026-03-31 16:44:13,183  INFO    IWM: Trend=bearish  Vol=mid  ATR=expanding  → iron_condor
+2026-03-31 16:44:13,183  INFO      $247.68  VIX=27.2  HV=25.7%
+2026-03-31 16:44:13,503  INFO    XBI: Trend=neutral  Vol=mid  ATR=expanding  → iron_condor
+2026-03-31 16:44:13,503  INFO      $127.50  VIX=27.2  HV=39.8%
+2026-03-31 16:44:13,503  INFO  Managing open positions...
+2026-03-31 16:44:13,503  INFO    Slot IWM_A: iron_condor  DTE=7  held=4d  credit=$2.40
+2026-03-31 16:44:13,572  INFO    Slot IWM_B: no open position
+2026-03-31 16:44:13,573  INFO    Slot XBI_A: iron_condor  DTE=10  held=4d  credit=$1.94
+2026-03-31 16:44:13,583  INFO    Slot XBI_B: no open position
+2026-03-31 16:44:13,583  INFO  Checking entry opportunities...
+2026-03-31 16:44:13,583  INFO    Slot IWM_B: gated until 2026-04-03
+2026-03-31 16:44:13,583  INFO    Slot XBI_B: gated until 2026-04-03
+2026-03-31 16:44:13,584  INFO  State saved.
+2026-03-31 16:44:13,584  INFO  ────────────────────────────────────────────────────────────
+2026-03-31 16:44:13,584  INFO    Slot IWM_A (IWM 17.5%): OPEN — iron_condor  10 contracts  DTE=7  credit=$2.40
+2026-03-31 16:44:13,584  INFO    Slot IWM_B (IWM 17.5%): EMPTY  next: 2026-04-03
+2026-03-31 16:44:13,584  INFO    Slot XBI_A (XBI 22.5%): OPEN — iron_condor  10 contracts  DTE=10  credit=$1.94
+2026-03-31 16:44:13,584  INFO    Slot XBI_B (XBI 22.5%): EMPTY  next: 2026-04-03
+2026-03-31 16:44:13,584  INFO    Portfolio: $96,489  |  Cash reserve ~20%
+2026-03-31 16:44:13,584  INFO  Done.
