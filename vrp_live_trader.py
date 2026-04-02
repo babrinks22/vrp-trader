@@ -807,6 +807,405 @@ def manage_spy_allocation(trade_client, data_client, state: dict,
 
 
 # ══════════════════════════════════════════════════════════════
+#  DAILY DIAGRAM UPDATE  (called every morning for open slots)
+# ══════════════════════════════════════════════════════════════
+
+def update_daily_diagrams(opt_data_client, state: dict, today: date):
+    """
+    Redraw the spread diagram for every open slot using live option
+    quotes + current DTE.  Shows where the position stands RIGHT NOW,
+    not just what it looks like at expiry.
+
+    Saved to: diagrams/YYYY-MM-DD_SlotID_live.png
+    """
+    try:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+        import numpy as np
+        from scipy.stats import norm
+        from scipy.optimize import brentq
+    except ImportError:
+        log.warning("  matplotlib/scipy not installed — skipping daily diagrams")
+        return
+
+    def bs(S, K, T, r, sig, opt_type):
+        if T <= 0:
+            return max(S - K, 0) if opt_type == "call" else max(K - S, 0)
+        try:
+            d1 = (math.log(S / K) + (r + 0.5 * sig**2) * T) / (sig * math.sqrt(T))
+            d2 = d1 - sig * math.sqrt(T)
+            if opt_type == "call":
+                return S * norm.cdf(d1) - K * math.exp(-r * T) * norm.cdf(d2)
+            return K * math.exp(-r * T) * norm.cdf(-d2) - S * norm.cdf(-d1)
+        except Exception:
+            return 0.0
+
+    G = "#1D9E75"; R = "#E24B4A"; B = "#378ADD"; A = "#EF9F27"
+    diagrams_dir = Path("diagrams")
+    diagrams_dir.mkdir(exist_ok=True)
+
+    for slot_id, slot_st in state["slots"].items():
+        pos = slot_st.get("position")
+        if not pos:
+            continue
+
+        # ── Get live quotes for all legs ──────────────────────
+        syms     = pos.get("leg_symbols", [])
+        sides    = pos.get("leg_sides", [])
+        credit   = float(pos.get("credit_received", 0))
+        ml       = float(pos.get("max_loss", 0))
+        contr    = int(pos.get("contracts", 1))
+        expiry   = date.fromisoformat(str(pos["expiry"]))
+        dte      = max((expiry - today).days, 0)
+        entry_px = float(pos.get("underlying_px", 0))
+        spread   = pos.get("spread", "unknown")
+
+        # Infer ticker from leg symbols
+        ticker = "IWM"
+        for t in ["IWM", "XBI", "QQQ", "SPY"]:
+            if syms and syms[0].startswith(t):
+                ticker = t; break
+
+        # Get live quotes
+        live_mids = {}
+        live_px   = entry_px
+        try:
+            snaps = opt_data_client.get_option_snapshot(
+                OptionSnapshotRequest(symbol_or_symbols=syms)
+            )
+            for sym in syms:
+                q = snaps[sym].latest_quote
+                bid = float(q.bid_price); ask = float(q.ask_price)
+                live_mids[sym] = (bid + ask) / 2 if bid > 0 or ask > 0 else 0.0
+        except Exception as e:
+            log.warning(f"  Could not get live quotes for {slot_id}: {e}")
+
+        # Get live underlying price
+        try:
+            import yfinance as yf
+            raw = yf.download(ticker, period="2d", auto_adjust=True,
+                              progress=False)["Close"].squeeze()
+            live_px = float(raw.dropna().iloc[-1])
+        except Exception:
+            pass
+
+        # Current spread value from live quotes
+        current_cost = 0.0
+        for sym, is_short in zip(syms, sides):
+            mid = live_mids.get(sym, 0.0)
+            current_cost += -mid if is_short else mid
+        # current_cost is negative (it costs money to close short spreads)
+        # P&L = credit_received + current_cost  (current_cost is negative = good)
+        current_pnl_ps = credit + current_cost
+        current_pnl_total = current_pnl_ps * contr * 100
+        pct_captured = (current_pnl_ps / credit * 100) if credit > 0 else 0
+
+        # Parse strikes from leg symbols
+        legs = []
+        for sym, is_short in zip(syms, sides):
+            try:
+                opt_type = "call" if "C" in sym[-10:] else "put"
+                strike = int(sym[-8:]) / 1000
+            except Exception:
+                opt_type = "put"; strike = 0
+            legs.append({"strike": strike, "type": opt_type, "is_short": is_short})
+
+        # Estimate implied vol from live quotes (use first short leg)
+        sig = 0.25  # fallback
+        try:
+            T = max(dte / 365, 1/365)
+            for sym, is_short, leg in zip(syms, sides, legs):
+                if is_short and leg["strike"] > 0 and live_px > 0:
+                    target = live_mids.get(sym, 0)
+                    if target > 0:
+                        def obj(v):
+                            return bs(live_px, leg["strike"], T, 0.04, v,
+                                      leg["type"]) - target
+                        sig = brentq(obj, 0.05, 3.0, xtol=0.001)
+                    break
+        except Exception:
+            pass
+
+        # ── Build P&L curves ──────────────────────────────────
+        strikes = [l["strike"] for l in legs if l["strike"] > 0]
+        if not strikes:
+            continue
+        lo = min(strikes); hi = max(strikes)
+        pad = max((hi - lo) * 1.6, live_px * 0.12)
+        px_range = np.linspace(lo - pad, hi + pad, 500)
+        T_now    = max(dte / 365, 1/365)
+        T_entry  = 14 / 365
+
+        def spread_pnl_at(px_arr, T_val, iv):
+            out = []
+            for px in px_arr:
+                val = credit
+                for leg in legs:
+                    k = leg["strike"]
+                    if k <= 0: continue
+                    p = bs(px, k, T_val, 0.04, iv, leg["type"])
+                    val += -p if leg["is_short"] else p
+                out.append(val * contr * 100)
+            return np.array(out)
+
+        pnl_expiry   = spread_pnl_at(px_range, 0,       sig)
+        pnl_now      = spread_pnl_at(px_range, T_now,   sig)
+        pnl_entry_iv = spread_pnl_at(px_range, T_entry, 0.22)
+
+        # ── Plot ──────────────────────────────────────────────
+        fig, ax = plt.subplots(figsize=(10, 5.5))
+        fig.patch.set_facecolor("#0f1117")
+        ax.set_facecolor("#1a1d27")
+        for sp in ax.spines.values():
+            sp.set_color("#2d3150")
+        ax.tick_params(colors="#7b82a0")
+
+        # Fills
+        ax.fill_between(px_range, pnl_now, 0, where=pnl_now >= 0,
+                        alpha=0.15, color=G, linewidth=0)
+        ax.fill_between(px_range, pnl_now, 0, where=pnl_now < 0,
+                        alpha=0.15, color=R, linewidth=0)
+
+        # Entry shape (dashed grey)
+        ax.plot(px_range, pnl_entry_iv, color="#555577",
+                lw=1.2, ls="--", label="At entry (14 DTE)")
+
+        # Expiry shape (blue)
+        ax.plot(px_range, pnl_expiry, color=B,
+                lw=1.5, ls=":", label="At expiry (0 DTE)", alpha=0.7)
+
+        # Live shape (green/red segmented)
+        for i in range(len(px_range) - 1):
+            c = G if pnl_now[i] >= 0 else R
+            ax.plot(px_range[i:i+2], pnl_now[i:i+2], color=c, lw=2.4)
+
+        # Zero line
+        ax.axhline(0, color="#2d3150", lw=1.0)
+
+        # Strike lines
+        color_map = {(True,"put"):R,(False,"put"):G,(True,"call"):R,(False,"call"):G}
+        for leg in legs:
+            k = leg["strike"]
+            if k <= 0: continue
+            c = color_map.get((leg["is_short"], leg["type"]), "#888")
+            ax.axvline(k, color=c, lw=0.9, ls=":", alpha=0.6)
+            lbl = ("Short" if leg["is_short"] else "Long") + f" {leg['type'].title()}\n${k:.0f}"
+            pv = float(np.interp(k, px_range, pnl_now))
+            yoff = 22 if leg["is_short"] else -32
+            ax.annotate(lbl, xy=(k, pv), xytext=(0, yoff),
+                        textcoords="offset points", ha="center",
+                        fontsize=7.5, color=c,
+                        arrowprops=dict(arrowstyle="-", color=c, alpha=0.4, lw=0.7))
+
+        # Live price line (amber)
+        ax.axvline(live_px, color=A, lw=1.8, ls="--", alpha=0.9,
+                   label=f"Live ${live_px:.2f}")
+
+        # Entry price line (faint)
+        if abs(live_px - entry_px) > 0.5:
+            ax.axvline(entry_px, color="#555577", lw=1.0, ls=":",
+                       alpha=0.5, label=f"Entry ${entry_px:.2f}")
+
+        # Max profit / loss markers
+        mp = credit * contr * 100
+        ml_d = -ml * contr * 100
+        ax.axhline(mp, color=G, lw=0.7, ls=":", alpha=0.4)
+        ax.axhline(ml_d, color=R, lw=0.7, ls=":", alpha=0.4)
+        ax.text(px_range[-1], mp, f" Max profit ${mp:,.0f}", color=G,
+                fontsize=8, va="bottom", ha="right")
+        ax.text(px_range[-1], ml_d, f" Max loss ${ml_d:,.0f}", color=R,
+                fontsize=8, va="top", ha="right")
+
+        # ── Annotations ───────────────────────────────────────
+        pnl_color = G if current_pnl_total >= 0 else R
+        ax.text(0.02, 0.97,
+                f"P&L today: {'+'if current_pnl_total>=0 else ''}"
+                f"${current_pnl_total:,.0f}  ({pct_captured:.0f}% of credit)",
+                transform=ax.transAxes, color=pnl_color,
+                fontsize=9, va="top", fontweight="bold")
+        ax.text(0.02, 0.90,
+                f"DTE: {dte}  |  IV: {sig*100:.0f}%  |  "
+                f"65% target: +${credit*0.65*contr*100:,.0f}",
+                transform=ax.transAxes,
+                color="#7b82a0", fontsize=8, va="top")
+
+        ax.set_xlabel("Underlying price", color="#7b82a0", fontsize=9)
+        ax.set_ylabel("P&L ($)", color="#7b82a0", fontsize=9)
+        ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"${x:.0f}"))
+        ax.yaxis.set_major_formatter(plt.FuncFormatter(
+            lambda y, _: f"${y:,.0f}" if y >= 0 else f"-${abs(y):,.0f}"))
+        ax.grid(True, color="#2d3150", linewidth=0.4, alpha=0.5)
+        ax.legend(fontsize=8, framealpha=0.15, labelcolor="#e8eaf0",
+                  facecolor="#1a1d27", edgecolor="#2d3150", loc="upper right")
+
+        spread_disp = spread.replace("_", " ").title()
+        title = (f"Slot {slot_id} ({ticker}) — {spread_disp}  "
+                 f"|  {dte} DTE  |  Credit ${credit:.4f} × {contr}c  "
+                 f"|  Expires {expiry}")
+        ax.set_title(title, color="#e8eaf0", fontsize=9, pad=10)
+
+        fig.tight_layout()
+        fpath = diagrams_dir / f"{today.isoformat()}_{slot_id}_live.png"
+        fig.savefig(fpath, dpi=130, bbox_inches="tight",
+                    facecolor=fig.get_facecolor())
+        plt.close(fig)
+        log.info(f"  Live diagram saved: {fpath}  "
+                 f"(P&L {'+' if current_pnl_total>=0 else ''}${current_pnl_total:,.0f}, "
+                 f"{pct_captured:.0f}% captured)")
+
+
+# ══════════════════════════════════════════════════════════════
+#  PORTFOLIO EQUITY CHART  (cumulative P&L from trade_log.csv)
+# ══════════════════════════════════════════════════════════════
+
+def update_portfolio_chart(portfolio_value: float, state: dict, today: date):
+    """
+    Build and save a daily equity curve chart from trade_log.csv plus
+    today's live portfolio value from Alpaca.
+
+    Saved to: diagrams/portfolio_equity.png  (overwritten daily)
+    """
+    try:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+        import matplotlib.dates as mdates
+        import numpy as np
+    except ImportError:
+        log.warning("  matplotlib not installed — skipping portfolio chart")
+        return
+
+    log_path = Path(CONFIG["log_file"])
+    initial  = state.get("initial_capital") or portfolio_value
+
+    G = "#1D9E75"; R = "#E24B4A"; B = "#378ADD"; A = "#EF9F27"
+
+    # ── Build equity curve from trade log ─────────────────────
+    dates_list  = [date.fromisoformat(str(state.get("start_date", today)))]
+    equity_list = [initial]
+
+    if log_path.exists():
+        try:
+            log_df = pd.read_csv(log_path)
+            log_df["date"] = pd.to_datetime(log_df["date"]).dt.date
+            # Only closed trades have real P&L
+            closed = log_df[log_df["action"] == "close"].copy() \
+                if "action" in log_df.columns else log_df.copy()
+            if "pnl" in closed.columns:
+                closed["pnl"] = pd.to_numeric(closed["pnl"], errors="coerce").fillna(0)
+                closed = closed.sort_values("date")
+                running = initial
+                for _, row in closed.iterrows():
+                    running += row["pnl"]
+                    dates_list.append(row["date"])
+                    equity_list.append(running)
+        except Exception as e:
+            log.warning(f"  Could not read trade log for portfolio chart: {e}")
+
+    # Always include today's actual Alpaca portfolio value as the last point
+    if dates_list[-1] != today:
+        dates_list.append(today)
+        equity_list.append(portfolio_value)
+    else:
+        equity_list[-1] = portfolio_value  # update today with live value
+
+    # ── Plot ──────────────────────────────────────────────────
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(11, 7),
+                                    gridspec_kw={"height_ratios": [3, 1]})
+    fig.patch.set_facecolor("#0f1117")
+    for ax in [ax1, ax2]:
+        ax.set_facecolor("#1a1d27")
+        for sp in ax.spines.values():
+            sp.set_color("#2d3150")
+        ax.tick_params(colors="#7b82a0")
+        ax.grid(True, color="#2d3150", linewidth=0.4, alpha=0.5)
+
+    import datetime as dt_mod
+    date_nums = [dt_mod.datetime.combine(d, dt_mod.time()) for d in dates_list]
+
+    eq = np.array(equity_list)
+    peak = np.maximum.accumulate(eq)
+    dd   = (eq - peak) / peak * 100
+
+    total_pnl  = equity_list[-1] - initial
+    total_ret  = total_pnl / initial * 100
+    max_dd     = dd.min()
+    n_days     = max((today - dates_list[0]).days, 1)
+    cagr       = ((equity_list[-1] / initial) ** (365 / n_days) - 1) * 100 \
+                 if n_days > 5 else 0
+
+    # ── Equity curve (top panel) ──────────────────────────────
+    ax1.fill_between(date_nums, eq, initial,
+                     where=eq >= initial, alpha=0.15, color=G, linewidth=0)
+    ax1.fill_between(date_nums, eq, initial,
+                     where=eq < initial,  alpha=0.15, color=R, linewidth=0)
+    ax1.plot(date_nums, eq, color=G if total_pnl >= 0 else R,
+             lw=2.2, label="Portfolio value")
+    ax1.axhline(initial, color="#555577", lw=1.0, ls="--",
+                label=f"Initial ${initial:,.0f}", alpha=0.7)
+
+    # Mark each closed trade
+    if len(dates_list) > 2:
+        for i in range(1, len(dates_list) - 1):
+            pnl = equity_list[i] - equity_list[i-1]
+            c   = G if pnl >= 0 else R
+            ax1.plot(date_nums[i], equity_list[i], "o",
+                     color=c, ms=5, zorder=5)
+
+    # Latest value annotation
+    ax1.annotate(
+        f"${equity_list[-1]:,.0f}\n{total_ret:+.1f}%",
+        xy=(date_nums[-1], equity_list[-1]),
+        xytext=(-60, 20 if total_pnl >= 0 else -40),
+        textcoords="offset points",
+        color=G if total_pnl >= 0 else R,
+        fontsize=9, fontweight="bold",
+        arrowprops=dict(arrowstyle="->", color="#7b82a0", lw=0.8)
+    )
+
+    ax1.set_ylabel("Portfolio value ($)", color="#7b82a0", fontsize=9)
+    ax1.yaxis.set_major_formatter(plt.FuncFormatter(
+        lambda y, _: f"${y:,.0f}"))
+    ax1.legend(fontsize=8, framealpha=0.15, labelcolor="#e8eaf0",
+               facecolor="#1a1d27", edgecolor="#2d3150")
+
+    # Header stats
+    stats_txt = (f"Total P&L: {'+'if total_pnl>=0 else ''}${total_pnl:,.0f}  |  "
+                 f"Return: {total_ret:+.1f}%  |  "
+                 f"Max DD: {max_dd:.1f}%  |  "
+                 f"CAGR: {cagr:.0f}%  |  "
+                 f"Trades: {max(len(dates_list)-2,0)}")
+    ax1.set_title(f"VRP Portfolio Equity Curve  —  {today}\n{stats_txt}",
+                  color="#e8eaf0", fontsize=9, pad=10)
+
+    # ── Drawdown (bottom panel) ────────────────────────────────
+    ax2.fill_between(date_nums, dd, 0,
+                     where=dd <= 0, alpha=0.55, color=R, linewidth=0)
+    ax2.plot(date_nums, dd, color=R, lw=1.5)
+    ax2.axhline(0, color="#2d3150", lw=0.8)
+    ax2.set_ylabel("Drawdown %", color="#7b82a0", fontsize=8)
+    ax2.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f"{y:.1f}%"))
+    ax2.set_xlabel("Date", color="#7b82a0", fontsize=8)
+
+    for ax in [ax1, ax2]:
+        ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %d"))
+        ax.xaxis.set_major_locator(mdates.AutoDateLocator())
+        plt.setp(ax.xaxis.get_majorticklabels(), rotation=30, ha="right")
+
+    fig.tight_layout(h_pad=0.5)
+    diagrams_dir = Path("diagrams")
+    diagrams_dir.mkdir(exist_ok=True)
+    fpath = diagrams_dir / "portfolio_equity.png"
+    fig.savefig(fpath, dpi=130, bbox_inches="tight",
+                facecolor=fig.get_facecolor())
+    plt.close(fig)
+    log.info(f"  Portfolio chart saved: {fpath}  "
+             f"(value=${portfolio_value:,.0f}, "
+             f"PnL={'+'if total_pnl>=0 else ''}${total_pnl:,.0f})")
+
+
+# ══════════════════════════════════════════════════════════════
 #  SLOT MANAGEMENT
 # ══════════════════════════════════════════════════════════════
 
@@ -1188,6 +1587,14 @@ def run():
             nxt = state["slots"][slot_id].get("next_entry","immediately")
             log.info(f"  Slot {slot_id} ({ticker} {slot_risk*100:.1f}%): EMPTY  next: {nxt}")
     log.info(f"  Portfolio: ${portfolio_value:,.0f}  |  Cash reserve ~20%")
+
+    # ── Daily diagrams & portfolio chart ─────────────────────
+    log.info("Generating daily live diagrams...")
+    update_daily_diagrams(opt_data, state, today)
+
+    log.info("Generating portfolio equity chart...")
+    update_portfolio_chart(portfolio_value, state, today)
+
     log.info("Done.")
 
 
