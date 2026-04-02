@@ -498,20 +498,37 @@ def get_regime(cfg: dict, ticker: str = "IWM") -> dict:
     else:
         atr = "expanding" if af > as_ else "contracting"
 
-    spread = REGIME_MAP.get((trend, vol, atr),
-             REGIME_MAP.get((trend, vol, "unknown"), "iron_condor"))
+    # ── Spread selection ─────────────────────────────────────────
+    # Always use iron_condor. Out-of-sample validation across 23 tickers
+    # confirmed iron_condor outperforms regime-selected spread on $/trade.
+    # The REGIME_MAP is retained for reference but not used for entry.
+    spread = "iron_condor"
+
+    # ── Skip-2 gate ───────────────────────────────────────────────
+    # Two regimes confirmed negative-EV for broad-index ETFs in both
+    # in-sample (IWM 2005-2023) and 23-ticker out-of-sample validation
+    # (p = 0.0002).  Structural reason: entering short-vega into rising IV.
+    #   neutral+high+expanding  — near-zero $/trade, 57% of tickers negative
+    #   bearish+low+expanding   — expanding ATR in falling market = vol spike risk
+    # When detected, slot sits out and retries the following day.
+    SKIP_REGIMES = {
+        ("neutral", "high", "expanding"),
+        ("bearish", "low",  "expanding"),
+    }
+    skip_entry = (trend, vol, atr) in SKIP_REGIMES
 
     iv = float(hv_val) * cfg["vrp_factor"] if not pd.isna(hv_val) else 0.20
 
     return {
-        "trend":    trend,
-        "vol":      vol,
-        "atr":      atr,
-        "hv":       float(hv_val) if not pd.isna(hv_val) else 0.20,
-        "iv":       iv,
-        "vix":      float(vix_val),
-        "price":    float(p),
-        "spread":   spread,
+        "trend":      trend,
+        "vol":        vol,
+        "atr":        atr,
+        "hv":         float(hv_val) if not pd.isna(hv_val) else 0.20,
+        "iv":         iv,
+        "vix":        float(vix_val),
+        "price":      float(p),
+        "spread":     spread,
+        "skip_entry": skip_entry,
     }
 
 
@@ -1345,7 +1362,18 @@ def enter_slot(trade_client, opt_data_client, slot_id: str,
     except Exception:
         pass
 
-    spread_name = regime["spread"]
+    # ── Skip-2 regime gate ───────────────────────────────────────
+    # If the current regime is one of the two statistically confirmed
+    # low-EV regimes (p=0.0002 OOS), hold cash for this cycle.
+    # The slot will retry naturally on the next daily run.
+    if regime.get("skip_entry", False):
+        skip_regime = f"{regime['trend']}+{regime['vol']}+{regime['atr']}"
+        log.info(f"  Slot {slot_id}: SKIP — regime {skip_regime} is in skip-2 "
+                 f"gate (neutral+high+expanding or bearish+low+expanding). "
+                 f"Holding cash, will retry tomorrow.")
+        return slot_state
+
+    spread_name = regime["spread"]   # always "iron_condor"
     params      = SPREAD_PARAMS[spread_name]
     S           = regime["price"]
     iv          = regime["iv"]
