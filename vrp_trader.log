@@ -161,3 +161,35 @@
 2026-04-01 16:40:47,171  INFO    Slot XBI_B (XBI 22.5%): EMPTY  next: 2026-04-03
 2026-04-01 16:40:47,171  INFO    Portfolio: $98,258  |  Cash reserve ~20%
 2026-04-01 16:40:47,171  INFO  Done.
+2026-04-02 16:41:27,256  INFO  ============================================================
+2026-04-02 16:41:27,256  INFO  VRP Live Trader — 2026-04-02  PAPER
+2026-04-02 16:41:27,256  INFO  ============================================================
+2026-04-02 16:41:27,336  INFO  Portfolio value: $99,327.94  Paper
+2026-04-02 16:41:27,336  INFO  Computing regimes...
+2026-04-02 16:41:27,805  INFO    IWM: Trend=neutral  Vol=low  ATR=expanding  → long_dte_condor
+2026-04-02 16:41:27,805  INFO      $250.11  VIX=26.0  HV=25.0%
+2026-04-02 16:41:28,067  INFO    XBI: Trend=neutral  Vol=low  ATR=expanding  → long_dte_condor
+2026-04-02 16:41:28,067  INFO      $128.16  VIX=26.0  HV=38.7%
+2026-04-02 16:41:28,067  INFO  Managing open positions...
+2026-04-02 16:41:28,067  INFO    Slot IWM_A: iron_condor  DTE=5  held=6d  credit=$2.40
+2026-04-02 16:41:28,117  INFO    Slot IWM_B: no open position
+2026-04-02 16:41:28,117  INFO    Slot XBI_A: iron_condor  DTE=8  held=6d  credit=$1.94
+2026-04-02 16:41:28,130  INFO    Slot XBI_B: no open position
+2026-04-02 16:41:28,130  INFO  Checking entry opportunities...
+2026-04-02 16:41:28,130  INFO    Slot IWM_B: gated until 2026-04-03
+2026-04-02 16:41:28,130  INFO    Slot XBI_B: gated until 2026-04-03
+2026-04-02 16:41:28,130  INFO  State saved.
+2026-04-02 16:41:28,131  INFO  ────────────────────────────────────────────────────────────
+2026-04-02 16:41:28,131  INFO    Slot IWM_A (IWM 17.5%): OPEN — iron_condor  10 contracts  DTE=5  credit=$2.40
+2026-04-02 16:41:28,131  INFO    Slot IWM_B (IWM 17.5%): EMPTY  next: 2026-04-03
+2026-04-02 16:41:28,131  INFO    Slot XBI_A (XBI 22.5%): OPEN — iron_condor  10 contracts  DTE=8  credit=$1.94
+2026-04-02 16:41:28,131  INFO    Slot XBI_B (XBI 22.5%): EMPTY  next: 2026-04-03
+2026-04-02 16:41:28,131  INFO    Portfolio: $99,328  |  Cash reserve ~20%
+2026-04-02 16:41:28,131  INFO  Generating daily live diagrams...
+2026-04-02 16:41:28,525  INFO  Failed to extract font properties from /usr/share/fonts/truetype/noto/NotoColorEmoji.ttf: Can not load face (unknown file format; error code 0x2)
+2026-04-02 16:41:28,556  INFO  generated new fontManager
+2026-04-02 16:41:29,922  INFO    Live diagram saved: diagrams/2026-04-02_IWM_A_live.png  (P&L +$1,450, 60% captured)
+2026-04-02 16:41:31,020  INFO    Live diagram saved: diagrams/2026-04-02_XBI_A_live.png  (P&L +$190, 10% captured)
+2026-04-02 16:41:31,020  INFO  Generating portfolio equity chart...
+2026-04-02 16:41:31,355  INFO    Portfolio chart saved: diagrams/portfolio_equity.png  (value=$99,328, PnL=+$306)
+2026-04-02 16:41:31,355  INFO  Done.
