@@ -2,7 +2,6 @@ name: VRP Daily Trade
 
 on:
   schedule:
-    # 9:45 AM ET = 13:45 UTC
     - cron: '45 13 * * 1-5'
   workflow_dispatch:
 
