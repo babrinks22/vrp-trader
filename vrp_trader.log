@@ -193,3 +193,45 @@
 2026-04-02 16:41:31,020  INFO  Generating portfolio equity chart...
 2026-04-02 16:41:31,355  INFO    Portfolio chart saved: diagrams/portfolio_equity.png  (value=$99,328, PnL=+$306)
 2026-04-02 16:41:31,355  INFO  Done.
+2026-04-03 15:55:54,430  INFO  ============================================================
+2026-04-03 15:55:54,430  INFO  VRP Live Trader — 2026-04-03  PAPER
+2026-04-03 15:55:54,430  INFO  ============================================================
+2026-04-03 15:55:54,549  INFO  Portfolio value: $99,457.94  Paper
+2026-04-03 15:55:54,549  INFO  Computing regimes...
+2026-04-03 15:55:55,054  INFO    IWM: Trend=neutral  Vol=low  ATR=expanding  → iron_condor
+2026-04-03 15:55:55,054  INFO      $251.29  VIX=23.9  HV=25.2%
+2026-04-03 15:55:55,287  INFO    XBI: Trend=neutral  Vol=low  ATR=expanding  → iron_condor
+2026-04-03 15:55:55,287  INFO      $128.96  VIX=23.9  HV=38.6%
+2026-04-03 15:55:55,287  INFO  Managing open positions...
+2026-04-03 15:55:55,287  INFO    Slot IWM_A: iron_condor  DTE=4  held=7d  credit=$2.40
+2026-04-03 15:55:55,386  INFO    Slot IWM_B: no open position
+2026-04-03 15:55:55,386  INFO    Slot XBI_A: iron_condor  DTE=7  held=7d  credit=$1.94
+2026-04-03 15:55:55,411  INFO    Slot XBI_B: no open position
+2026-04-03 15:55:55,411  INFO  Checking entry opportunities...
+2026-04-03 15:55:55,438  INFO    Slot IWM_B: entering iron_condor  regime=neutral+low+expanding  target_expiry=2026-04-17
+2026-04-03 15:55:55,677  INFO    Order submitted: e59cbbbb-cc7a-4bfd-ae2b-847cf1596791  limit=$1.31  qty=26
+2026-04-03 15:55:56,019  INFO  Failed to extract font properties from /usr/share/fonts/truetype/noto/NotoColorEmoji.ttf: Can not load face (unknown file format; error code 0x2)
+2026-04-03 15:55:56,134  INFO  generated new fontManager
+2026-04-03 15:55:57,245  INFO    Diagram saved: diagrams/2026-04-03_IWM_B_iron_condor.png
+2026-04-03 15:55:57,247  INFO    Spread logged: spread_log.csv
+2026-04-03 15:55:57,247  INFO    Slot IWM_B: opened iron_condor  26 contracts  credit=$1.31  max_loss=$6.69
+2026-04-03 15:55:57,279  INFO    Slot XBI_B: entering iron_condor  regime=neutral+low+expanding  target_expiry=2026-04-17
+2026-04-03 15:55:57,516  INFO    Order submitted: 3fa2d8bc-fbc9-4033-acb2-f32d9c739309  limit=$0.89  qty=54
+2026-04-03 15:55:58,130  INFO    Diagram saved: diagrams/2026-04-03_XBI_B_iron_condor.png
+2026-04-03 15:55:58,132  INFO    Spread logged: spread_log.csv
+2026-04-03 15:55:58,132  INFO    Slot XBI_B: opened iron_condor  54 contracts  credit=$0.89  max_loss=$4.11
+2026-04-03 15:55:58,133  INFO  State saved.
+2026-04-03 15:55:58,133  INFO  ────────────────────────────────────────────────────────────
+2026-04-03 15:55:58,133  INFO    Slot IWM_A (IWM 17.5%): OPEN — iron_condor  10 contracts  DTE=4  credit=$2.40
+2026-04-03 15:55:58,133  INFO    Slot IWM_B (IWM 17.5%): OPEN — iron_condor  26 contracts  DTE=11  credit=$1.31
+2026-04-03 15:55:58,133  INFO    Slot XBI_A (XBI 22.5%): OPEN — iron_condor  10 contracts  DTE=7  credit=$1.94
+2026-04-03 15:55:58,133  INFO    Slot XBI_B (XBI 22.5%): OPEN — iron_condor  54 contracts  DTE=14  credit=$0.90
+2026-04-03 15:55:58,133  INFO    Portfolio: $99,458  |  Cash reserve ~20%
+2026-04-03 15:55:58,133  INFO  Generating daily live diagrams...
+2026-04-03 15:55:59,089  INFO    Live diagram saved: diagrams/2026-04-03_IWM_A_live.png  (P&L +$1,450, 60% captured)
+2026-04-03 15:55:59,866  INFO    Live diagram saved: diagrams/2026-04-03_IWM_B_live.png  (P&L +$0, 0% captured)
+2026-04-03 15:56:00,799  INFO    Live diagram saved: diagrams/2026-04-03_XBI_A_live.png  (P&L +$370, 19% captured)
+2026-04-03 15:56:01,603  INFO    Live diagram saved: diagrams/2026-04-03_XBI_B_live.png  (P&L +$0, 0% captured)
+2026-04-03 15:56:01,603  INFO  Generating portfolio equity chart...
+2026-04-03 15:56:01,882  INFO    Portfolio chart saved: diagrams/portfolio_equity.png  (value=$99,458, PnL=+$436)
+2026-04-03 15:56:01,883  INFO  Done.
