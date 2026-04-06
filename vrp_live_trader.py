@@ -639,17 +639,75 @@ def submit_spread(trade_client, spread_type: str, legs_info: list,
 
 
 def close_position_by_legs(trade_client, position_state: dict) -> bool:
-    """Close an existing spread position at market."""
-    leg_symbols = position_state.get("leg_symbols", [])
-    success = True
-    for sym in leg_symbols:
+    """
+    Close an existing spread position leg by leg.
+
+    Best-effort: closes as many legs as possible and returns True even on
+    partial failures so that state.json is always updated and the slot is
+    freed.  This prevents the dangerous state of state.json thinking a
+    position is open while it has already been partially closed in Alpaca.
+
+    Legs worth < MIN_CLOSE_VALUE are skipped — letting them expire worthless
+    is cheaper than paying bid-ask to close a $0.01 option.
+    """
+    MIN_CLOSE_VALUE = 0.03   # $/share — don't chase options below this
+    leg_symbols  = position_state.get("leg_symbols", [])
+    leg_sides    = position_state.get("leg_sides",   [])
+    closed_count = 0
+    failed_legs  = []
+
+    # First pass: read current position sizes from Alpaca
+    try:
+        open_pos = {p.symbol: p for p in trade_client.get_all_positions()}
+    except Exception:
+        open_pos = {}
+
+    for sym, is_short in zip(leg_symbols, leg_sides):
+        # If leg has no position in Alpaca, skip (already expired/assigned)
+        if sym not in open_pos:
+            log.info(f"  Leg {sym}: not in Alpaca positions — already closed/expired")
+            closed_count += 1
+            continue
+
+        # Check current market value — skip worthless legs
         try:
-            trade_client.close_position(sym)
-            log.info(f"  Closed leg: {sym}")
-        except Exception as e:
-            log.error(f"  Failed to close {sym}: {e}")
-            success = False
-    return success
+            pos_val = abs(float(open_pos[sym].market_value))
+            per_share = pos_val / (abs(float(open_pos[sym].qty)) * 100)
+            if per_share < MIN_CLOSE_VALUE:
+                log.info(f"  Leg {sym}: value ${per_share:.3f}/share < "
+                         f"${MIN_CLOSE_VALUE} — letting expire worthless")
+                closed_count += 1
+                continue
+        except Exception:
+            pass   # proceed with close attempt if we can't read value
+
+        # Attempt close with retry
+        for attempt in range(3):
+            try:
+                trade_client.close_position(sym)
+                log.info(f"  Closed leg: {sym}")
+                closed_count += 1
+                break
+            except Exception as e:
+                err = str(e)
+                if attempt < 2:
+                    import time; time.sleep(1.5)
+                else:
+                    log.error(f"  Failed to close {sym} after 3 attempts: {err}")
+                    failed_legs.append(sym)
+
+    total = len(leg_symbols)
+    if failed_legs:
+        log.warning(f"  Partial close: {closed_count}/{total} legs closed. "
+                    f"Failed: {failed_legs}. Freeing slot anyway — "
+                    f"check Alpaca manually for remaining legs.")
+    else:
+        log.info(f"  All {closed_count}/{total} legs closed successfully.")
+
+    # Always return True so _record_close() fires and state.json is updated.
+    # A partial close is better tracked as "closed with warning" than left
+    # open indefinitely causing the slot to be permanently blocked.
+    return True
 
 
 # ══════════════════════════════════════════════════════════════
@@ -1533,9 +1591,18 @@ def run():
 
     # ── Account value ─────────────────────────────────────────
     account = trade_client.get_account()
-    portfolio_value = float(account.portfolio_value)
-    log.info(f"Portfolio value: ${portfolio_value:,.2f}  "
-             f"{'Paper' if PAPER else 'Live'}")
+    # Use last_equity (prior-close settled value) for position sizing.
+    # portfolio_value includes live option mark-to-market and drops
+    # immediately when new spreads are opened (bid-ask slippage on valuation),
+    # causing apparent -5-7% swings that incorrectly shrink next-entry sizing.
+    # last_equity is the settled cash+equity value from prior close and is
+    # the correct stable base for computing how many contracts to enter.
+    portfolio_value = float(account.last_equity)
+    mtm_value       = float(account.portfolio_value)
+    log.info(f"Portfolio (last equity):   ${portfolio_value:,.2f}  "
+             f"({'Paper' if PAPER else 'Live'})")
+    log.info(f"Portfolio (live MTM):      ${mtm_value:,.2f}  "
+             f"(not used for sizing — includes option bid-ask drag)")
 
     # ── Load state ────────────────────────────────────────────
     state = load_state()
