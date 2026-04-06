@@ -235,3 +235,40 @@
 2026-04-03 15:56:01,603  INFO  Generating portfolio equity chart...
 2026-04-03 15:56:01,882  INFO    Portfolio chart saved: diagrams/portfolio_equity.png  (value=$99,458, PnL=+$436)
 2026-04-03 15:56:01,883  INFO  Done.
+2026-04-06 16:04:39,332  INFO  ============================================================
+2026-04-06 16:04:39,332  INFO  VRP Live Trader — 2026-04-06  PAPER
+2026-04-06 16:04:39,332  INFO  ============================================================
+2026-04-06 16:04:39,753  INFO  Portfolio value: $92,817.44  Paper
+2026-04-06 16:04:39,754  INFO  Computing regimes...
+2026-04-06 16:04:40,385  INFO    IWM: Trend=neutral  Vol=low  ATR=expanding  → iron_condor
+2026-04-06 16:04:40,386  INFO      $252.22  VIX=24.1  HV=23.8%
+2026-04-06 16:04:40,630  INFO    XBI: Trend=neutral  Vol=low  ATR=expanding  → iron_condor
+2026-04-06 16:04:40,630  INFO      $130.43  VIX=24.1  HV=38.8%
+2026-04-06 16:04:40,630  INFO  Managing open positions...
+2026-04-06 16:04:40,630  INFO    Slot IWM_A: iron_condor  DTE=1  held=10d  credit=$2.40
+2026-04-06 16:04:40,630  INFO    Slot IWM_A: DTE exit (dte=1)
+2026-04-06 16:04:40,705  INFO    Closed leg: IWM260407P00235000
+2026-04-06 16:04:40,779  ERROR    Failed to close IWM260407P00227500: {"code":40310000,"message":"order has been rejected due to no available quote for symbol. please reenter with a limit"}
+2026-04-06 16:04:40,850  INFO    Closed leg: IWM260407C00256000
+2026-04-06 16:04:40,918  ERROR    Failed to close IWM260407C00263000: {"code":40310000,"message":"account not eligible to trade uncovered option contracts"}
+2026-04-06 16:04:40,918  INFO    Slot IWM_B: iron_condor  DTE=8  held=3d  credit=$1.31
+2026-04-06 16:04:41,248  INFO    Slot XBI_A: iron_condor  DTE=4  held=10d  credit=$1.94
+2026-04-06 16:04:41,336  INFO    Slot XBI_B: iron_condor  DTE=11  held=3d  credit=$0.90
+2026-04-06 16:04:41,405  INFO  Checking entry opportunities...
+2026-04-06 16:04:41,405  INFO  State saved.
+2026-04-06 16:04:41,405  INFO  ────────────────────────────────────────────────────────────
+2026-04-06 16:04:41,406  INFO    Slot IWM_A (IWM 17.5%): OPEN — iron_condor  10 contracts  DTE=1  credit=$2.40
+2026-04-06 16:04:41,406  INFO    Slot IWM_B (IWM 17.5%): OPEN — iron_condor  26 contracts  DTE=8  credit=$1.31
+2026-04-06 16:04:41,406  INFO    Slot XBI_A (XBI 22.5%): OPEN — iron_condor  10 contracts  DTE=4  credit=$1.94
+2026-04-06 16:04:41,406  INFO    Slot XBI_B (XBI 22.5%): OPEN — iron_condor  54 contracts  DTE=11  credit=$0.90
+2026-04-06 16:04:41,406  INFO    Portfolio: $92,817  |  Cash reserve ~20%
+2026-04-06 16:04:41,406  INFO  Generating daily live diagrams...
+2026-04-06 16:04:41,898  INFO  Failed to extract font properties from /usr/share/fonts/truetype/noto/NotoColorEmoji.ttf: Can not load face (unknown file format; error code 0x2)
+2026-04-06 16:04:43,535  INFO  generated new fontManager
+2026-04-06 16:04:44,830  INFO    Live diagram saved: diagrams/2026-04-06_IWM_A_live.png  (P&L +$2,100, 87% captured)
+2026-04-06 16:04:45,835  INFO    Live diagram saved: diagrams/2026-04-06_IWM_B_live.png  (P&L +$1,144, 34% captured)
+2026-04-06 16:04:46,930  INFO    Live diagram saved: diagrams/2026-04-06_XBI_A_live.png  (P&L $-90, -5% captured)
+2026-04-06 16:04:47,937  INFO    Live diagram saved: diagrams/2026-04-06_XBI_B_live.png  (P&L $-945, -20% captured)
+2026-04-06 16:04:47,938  INFO  Generating portfolio equity chart...
+2026-04-06 16:04:48,267  INFO    Portfolio chart saved: diagrams/portfolio_equity.png  (value=$92,817, PnL=$-6,204)
+2026-04-06 16:04:48,267  INFO  Done.
