@@ -1,32 +1,38 @@
 {
   "slots": {
     "IWM_A": {
-      "position": {
-        "entry_date": "2026-03-27",
-        "expiry": "2026-04-07",
-        "spread": "iron_condor",
-        "trend_regime": "bearish",
-        "vol_regime": "mid",
-        "atr_regime": "expanding",
-        "contracts": 10,
-        "credit_received": 2.405,
-        "max_loss": 4.595,
-        "leg_symbols": [
-          "IWM260407P00235000",
-          "IWM260407P00227500",
-          "IWM260407C00256000",
-          "IWM260407C00263000"
-        ],
-        "leg_sides": [
-          true,
-          false,
-          true,
-          false
-        ],
-        "order_id": "fa7c5b90-90dd-4b71-8d95-9b7e9f5eb2be",
-        "underlying_px": 244.3350067138672
-      },
-      "next_entry": null
+      "position": null,
+      "next_entry": "2026-04-08",
+      "closed_trades": [
+        {
+          "entry_date": "2026-03-27",
+          "expiry": "2026-04-07",
+          "spread": "iron_condor",
+          "trend_regime": "bearish",
+          "vol_regime": "mid",
+          "atr_regime": "expanding",
+          "contracts": 10,
+          "credit_received": 2.405,
+          "max_loss": 4.595,
+          "leg_symbols": [
+            "IWM260407P00235000",
+            "IWM260407P00227500",
+            "IWM260407C00256000",
+            "IWM260407C00263000"
+          ],
+          "leg_sides": [
+            true,
+            false,
+            true,
+            false
+          ],
+          "order_id": "fa7c5b90-90dd-4b71-8d95-9b7e9f5eb2be",
+          "underlying_px": 244.3350067138672,
+          "close_date": "2026-04-07",
+          "close_reason": "dte_exit",
+          "realized_pnl": 2355.0
+        }
+      ]
     },
     "IWM_B": {
       "position": {
@@ -57,32 +63,38 @@
       "next_entry": null
     },
     "XBI_A": {
-      "position": {
-        "entry_date": "2026-03-27",
-        "expiry": "2026-04-10",
-        "spread": "iron_condor",
-        "trend_regime": "bearish",
-        "vol_regime": "mid",
-        "atr_regime": "expanding",
-        "contracts": 10,
-        "credit_received": 1.935,
-        "max_loss": 3.065,
-        "leg_symbols": [
-          "XBI260410P00114000",
-          "XBI260410P00109000",
-          "XBI260410C00128500",
-          "XBI260410C00133000"
-        ],
-        "leg_sides": [
-          true,
-          false,
-          true,
-          false
-        ],
-        "order_id": "3009a403-d850-496e-a02d-86a975ca4e68",
-        "underlying_px": 120.51000213623047
-      },
-      "next_entry": null
+      "position": null,
+      "next_entry": "2026-04-08",
+      "closed_trades": [
+        {
+          "entry_date": "2026-03-27",
+          "expiry": "2026-04-10",
+          "spread": "iron_condor",
+          "trend_regime": "bearish",
+          "vol_regime": "mid",
+          "atr_regime": "expanding",
+          "contracts": 10,
+          "credit_received": 1.935,
+          "max_loss": 3.065,
+          "leg_symbols": [
+            "XBI260410P00114000",
+            "XBI260410P00109000",
+            "XBI260410C00128500",
+            "XBI260410C00133000"
+          ],
+          "leg_sides": [
+            true,
+            false,
+            true,
+            false
+          ],
+          "order_id": "3009a403-d850-496e-a02d-86a975ca4e68",
+          "underlying_px": 120.51000213623047,
+          "close_date": "2026-04-07",
+          "close_reason": "dte_exit",
+          "realized_pnl": 760.0000000000002
+        }
+      ]
     },
     "XBI_B": {
       "position": {
