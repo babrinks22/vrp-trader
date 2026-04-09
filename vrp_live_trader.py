@@ -1510,6 +1510,7 @@ def enter_slot(trade_client, opt_data_client, slot_id: str,
     # Only enter during market hours
     if not is_market_open():
         log.info(f"  Slot {slot_id}: market closed — skipping entry, will retry next run")
+        slot_state["next_entry"] = (today + timedelta(days=1)).isoformat()
         return slot_state
 
     # Safety: count already-open option legs for this ticker.
@@ -1521,6 +1522,7 @@ def enter_slot(trade_client, opt_data_client, slot_id: str,
         max_legs = 8   # 2 slots × 4 legs per condor
         if ticker_legs >= max_legs:
             log.warning(f"  Slot {slot_id}: {ticker_legs} {ticker} legs open already — skipping")
+            slot_state["next_entry"] = (today + timedelta(days=1)).isoformat()
             return slot_state
     except Exception:
         pass
@@ -1534,6 +1536,7 @@ def enter_slot(trade_client, opt_data_client, slot_id: str,
         log.info(f"  Slot {slot_id}: SKIP — regime {skip_regime} is in skip-2 "
                  f"gate (neutral+high+expanding or bearish+low+expanding). "
                  f"Holding cash, will retry tomorrow.")
+        slot_state["next_entry"] = (today + timedelta(days=1)).isoformat()
         return slot_state
 
     spread_name = regime["spread"]   # always "iron_condor"
@@ -1575,6 +1578,7 @@ def enter_slot(trade_client, opt_data_client, slot_id: str,
 
     if not short_put or not long_put:
         log.error(f"  Slot {slot_id}: could not find put contracts, skipping")
+        slot_state["next_entry"] = (today + timedelta(days=1)).isoformat()
         return slot_state
 
     legs_info = [
@@ -1611,6 +1615,7 @@ def enter_slot(trade_client, opt_data_client, slot_id: str,
 
     if net_credit <= 0:
         log.warning(f"  Slot {slot_id}: zero/negative credit ${net_credit:.2f}, skipping")
+        slot_state["next_entry"] = (today + timedelta(days=1)).isoformat()
         return slot_state
 
     # ── Gate 1: minimum absolute credit ──────────────────────
@@ -1619,6 +1624,7 @@ def enter_slot(trade_client, opt_data_client, slot_id: str,
     if net_credit < min_cr_abs:
         log.info(f"  Slot {slot_id}: credit ${net_credit:.3f} < minimum "
                  f"${min_cr_abs:.2f}/share (IV too low). Skipping — retry tomorrow.")
+        slot_state["next_entry"] = (today + timedelta(days=1)).isoformat()
         return slot_state
 
     # CR ratio gate removed after optimisation — the $0.60 absolute credit
@@ -1633,6 +1639,7 @@ def enter_slot(trade_client, opt_data_client, slot_id: str,
                                    ticker=ticker)
     if contracts < 1:
         log.warning(f"  Slot {slot_id}: insufficient capital for 1 contract")
+        slot_state["next_entry"] = (today + timedelta(days=1)).isoformat()
         return slot_state
 
     # ── Submit and read actual fill ──────────────────────────
