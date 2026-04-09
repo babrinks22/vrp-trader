@@ -603,12 +603,22 @@ def find_contract(trade_client, opt_data_client,
 # ══════════════════════════════════════════════════════════════
 
 def submit_spread(trade_client, spread_type: str, legs_info: list,
-                  contracts: int, net_credit: float) -> str:
+                  contracts: int, net_credit: float) -> tuple:
     """
-    Submit a multi-leg credit spread order.
-    legs_info: list of {"symbol", "side": "sell"/"buy"}
-    net_credit: positive number (credit we expect to receive)
-    Returns order ID or None on failure.
+    Submit a multi-leg credit spread order and wait for fill confirmation.
+
+    Returns (order_id, actual_fill_credit) or (None, None) on failure.
+    actual_fill_credit is the true per-share credit received at fill —
+    this is what gets stored in state.json as credit_received, NOT the
+    mid-price estimate used as the limit.  Using the actual fill ensures
+    profit target calculations are always based on real execution prices.
+
+    Fill-reading logic:
+      - After submit, poll the order for up to 45 s (3 × 15 s intervals)
+      - If the mleg order reports filled_avg_price, use that directly
+      - Otherwise, fall back to reading individual leg fills and summing them
+      - If the order is still open after 45 s (partial or pending), widen the
+        limit by CONFIG["limit_offset"] and retry up to MAX_RETRIES times
     """
     legs = []
     for leg in legs_info:
@@ -618,28 +628,116 @@ def submit_spread(trade_client, spread_type: str, legs_info: list,
             ratio_qty=1,
         ))
 
-    # Alpaca mleg credit spread: limit_price = positive net credit
-    # (the minimum credit you are willing to receive per share)
     limit_price = round(abs(net_credit), 2)
     if limit_price <= 0:
         log.error("  Net credit is zero or negative, cannot submit")
-        return None
+        return None, None
 
-    try:
-        order = trade_client.submit_order(
-            LimitOrderRequest(
-                qty=contracts,
-                time_in_force=TimeInForce.DAY,
-                order_class=OrderClass.MLEG,
-                limit_price=limit_price,
-                legs=legs,
+    MAX_RETRIES   = CONFIG.get("max_fill_retries", 3)
+    LIMIT_OFFSET  = CONFIG.get("limit_offset", 0.05)
+    POLL_WAIT     = 15   # seconds between fill checks
+
+    for attempt in range(MAX_RETRIES):
+        try:
+            order = trade_client.submit_order(
+                LimitOrderRequest(
+                    qty=contracts,
+                    time_in_force=TimeInForce.DAY,
+                    order_class=OrderClass.MLEG,
+                    limit_price=limit_price,
+                    legs=legs,
+                )
             )
-        )
-        log.info(f"  Order submitted: {order.id}  limit=${limit_price}  qty={contracts}")
-        return str(order.id)
-    except Exception as e:
-        log.error(f"  Order submission failed: {e}")
-        return None
+            order_id = str(order.id)
+            log.info(f"  Order submitted: {order_id}  limit=${limit_price}  "
+                     f"qty={contracts}  attempt={attempt+1}")
+        except Exception as e:
+            log.error(f"  Order submission failed (attempt {attempt+1}): {e}")
+            return None, None
+
+        # Poll for fill
+        import time
+        filled_credit = None
+        for poll in range(3):
+            time.sleep(POLL_WAIT)
+            try:
+                o = trade_client.get_order_by_id(order_id)
+                status = str(o.status).lower()
+
+                if "filled" in status or "complete" in status:
+                    # ── Method 1: mleg reports filled_avg_price directly ──
+                    fp = getattr(o, "filled_avg_price", None)
+                    if fp is not None:
+                        try:
+                            # Alpaca returns credit as negative for mleg sells
+                            filled_credit = abs(float(fp))
+                            log.info(f"  Fill confirmed (mleg avg): "
+                                     f"${filled_credit:.4f}/share  "
+                                     f"(limit was ${limit_price:.2f}, "
+                                     f"slippage {(limit_price-filled_credit)/limit_price*100:.1f}%)")
+                            break
+                        except (TypeError, ValueError):
+                            pass
+
+                    # ── Method 2: sum individual leg fills ─────────────────
+                    leg_fills = {}
+                    try:
+                        legs_data = getattr(o, "legs", []) or []
+                        for l in legs_data:
+                            sym  = str(l.symbol)
+                            side = str(l.side).lower()
+                            fp_l = getattr(l, "filled_avg_price", None)
+                            if fp_l is not None:
+                                leg_fills[sym] = ("sell" in side, float(fp_l))
+                    except Exception:
+                        pass
+
+                    if leg_fills:
+                        total = sum(
+                            fp if is_sell else -fp
+                            for is_sell, fp in leg_fills.values()
+                        )
+                        filled_credit = total
+                        log.info(f"  Fill confirmed (leg sum): "
+                                 f"${filled_credit:.4f}/share  "
+                                 f"(limit was ${limit_price:.2f}, "
+                                 f"slippage {(limit_price-filled_credit)/limit_price*100:.1f}%)")
+                        break
+
+                    # Filled but can't read price — use limit as fallback
+                    filled_credit = limit_price
+                    log.warning(f"  Order filled but could not read fill price — "
+                                f"using limit ${limit_price:.2f} as fallback")
+                    break
+
+                elif "cancel" in status or "reject" in status or "expired" in status:
+                    log.warning(f"  Order {order_id} {status}")
+                    filled_credit = None
+                    break
+
+                else:
+                    log.info(f"  Order {order_id} status={status} "
+                             f"(poll {poll+1}/3, waiting {POLL_WAIT}s...)")
+
+            except Exception as e:
+                log.error(f"  Could not get order status: {e}")
+
+        if filled_credit is not None and filled_credit > 0:
+            return order_id, filled_credit
+
+        # Not filled — widen limit and retry
+        if attempt < MAX_RETRIES - 1:
+            limit_price = round(limit_price - LIMIT_OFFSET, 2)
+            log.info(f"  Not filled — widening limit to ${limit_price:.2f} "
+                     f"(attempt {attempt+2}/{MAX_RETRIES})")
+            # Cancel the unfilled order before retrying
+            try:
+                trade_client.cancel_order_by_id(order_id)
+            except Exception:
+                pass
+
+    log.error(f"  Spread order not filled after {MAX_RETRIES} attempts")
+    return None, None
 
 
 def close_position_by_legs(trade_client, position_state: dict) -> bool:
@@ -1534,14 +1632,26 @@ def enter_slot(trade_client, opt_data_client, slot_id: str,
         log.warning(f"  Slot {slot_id}: insufficient capital for 1 contract")
         return slot_state
 
-    # ── Submit ────────────────────────────────────────────────
-    order_id = submit_spread(trade_client, spread_name, legs_info,
-                             contracts, net_credit)
+    # ── Submit and read actual fill ──────────────────────────
+    order_id, filled_credit = submit_spread(trade_client, spread_name,
+                                            legs_info, contracts, net_credit)
     if not order_id:
         # Order failed — gate slot until tomorrow so we retry with fresh quotes
         log.warning(f"  Slot {slot_id}: order failed, retrying next market session")
         slot_state["next_entry"] = (today + timedelta(days=1)).isoformat()
         return slot_state
+
+    # Use the actual fill price for credit_received and max_loss.
+    # net_credit is the mid-price estimate used as the limit; filled_credit
+    # is what was actually received.  Profit target and diagrams use
+    # filled_credit so every calculation is anchored to real execution.
+    actual_credit = filled_credit if filled_credit else net_credit
+    actual_max_loss = put_width - actual_credit
+    if actual_credit != net_credit:
+        slip_pct = (net_credit - actual_credit) / net_credit * 100
+        log.info(f"  Slot {slot_id}: fill slippage "
+                 f"${net_credit:.4f} (mid) → ${actual_credit:.4f} (fill)  "
+                 f"= {slip_pct:.1f}%")
 
     # ── Record state ──────────────────────────────────────────
     slot_state["position"] = {
@@ -1553,8 +1663,9 @@ def enter_slot(trade_client, opt_data_client, slot_id: str,
         "vol_regime":       regime["vol"],
         "atr_regime":       regime["atr"],
         "contracts":        contracts,
-        "credit_received":  round(net_credit, 4),
-        "max_loss":         round(max_loss, 4),
+        "credit_received":  round(actual_credit, 4),    # actual fill, not mid
+        "credit_mid":       round(net_credit, 4),        # mid at quote time (for reference)
+        "max_loss":         round(actual_max_loss, 4),   # recalculated from actual fill
         "leg_symbols":      leg_symbols,
         "leg_sides":        leg_sides,
         "order_id":         order_id,
@@ -1562,7 +1673,7 @@ def enter_slot(trade_client, opt_data_client, slot_id: str,
     }
     slot_state["next_entry"] = None
 
-    # Log trade
+    # Log trade — record both mid and actual fill for slippage tracking
     log_trade({
         "date":           today.isoformat(),
         "action":         "open",
@@ -1572,8 +1683,11 @@ def enter_slot(trade_client, opt_data_client, slot_id: str,
         "vol":            regime["vol"],
         "atr":            regime["atr"],
         "contracts":      contracts,
-        "credit":         round(net_credit, 4),
-        "max_loss":       round(max_loss, 4),
+        "credit":         round(actual_credit, 4),
+        "credit_mid":     round(net_credit, 4),
+        "slippage_pct":   round((net_credit-actual_credit)/net_credit*100, 1)
+                          if net_credit > 0 else 0,
+        "max_loss":       round(actual_max_loss, 4),
         "underlying_px":  round(S, 2),
         "order_id":       order_id,
     })
@@ -1591,8 +1705,8 @@ def enter_slot(trade_client, opt_data_client, slot_id: str,
         short_call=short_call if params["call_delta"] > 0 else None,
         long_call=long_call   if params["call_delta"] > 0 else None,
         S=S,
-        net_credit=net_credit,
-        max_loss=max_loss,
+        net_credit=actual_credit,   # diagram uses actual fill price
+        max_loss=actual_max_loss,
         contracts=contracts,
         today=today,
         regime=regime,
@@ -1600,8 +1714,9 @@ def enter_slot(trade_client, opt_data_client, slot_id: str,
     )
 
     log.info(f"  Slot {slot_id}: opened {spread_name}  "
-             f"{contracts} contracts  credit=${net_credit:.2f}  "
-             f"max_loss=${max_loss:.2f}")
+             f"{contracts} contracts  "
+             f"credit=${actual_credit:.4f} (mid ${net_credit:.4f})  "
+             f"max_loss=${actual_max_loss:.4f}")
     return slot_state
 
 
