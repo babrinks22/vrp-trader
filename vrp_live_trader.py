@@ -104,9 +104,12 @@ CONFIG = {
 
     # ── Spread parameters ─────────────────────────────────────
     "spread_pct":      0.025,  # strike width as % of underlying (legacy — wings now IV-scaled)
-    "min_credit":      0.60,   # minimum net credit per share — optimised via
-                               # 19yr IWM backtest: best Sharpe (3.749) at $0.60
-                               # skips low-vol entries where credit < bid-ask cost
+    "min_credit":      0.90,   # minimum net credit per share.
+                               # Derived from abs slippage model: $0.30 fixed
+                               # bid-ask cost + $0.60 backtest-optimal net credit
+                               # = $0.90 gross minimum. Passes all VIX≥15 fills;
+                               # only blocks ultra-calm (VIX<14) entries where
+                               # slippage would exceed 33% of gross credit.
                                # prevents entering when IV is so low the reward is negligible
     "r":               0.04,   # risk-free rate for B-S
 
