@@ -1464,7 +1464,7 @@ def _record_close(slot_state: dict, today: date, reason: str, pnl: float):
     slot_state["closed_trades"] = slot_state.get("closed_trades", [])
     slot_state["closed_trades"].append(dict(slot_state["position"]))
     slot_state["position"]        = None
-    slot_state["next_entry"]      = (today + timedelta(days=1)).isoformat()
+    slot_state["next_entry"]      = _next_trading_day(today)
     log.info(f"  Closed: {reason}  P&L=${pnl:,.2f}")
 
 
@@ -1490,6 +1490,19 @@ def is_market_open() -> bool:
     return market_open <= now_et <= market_close
 
 
+def _next_trading_day(d) -> str:
+    """
+    Return the next calendar date that is a weekday (Mon-Fri).
+    Skips Saturday → Monday, skips Sunday → Monday.
+    Used everywhere next_entry is set so slots never get gated on a
+    non-trading day that would silently delay entry by 2 extra days.
+    """
+    nxt = d + timedelta(days=1)
+    while nxt.weekday() >= 5:   # 5=Sat, 6=Sun
+        nxt += timedelta(days=1)
+    return nxt.isoformat()
+
+
 def enter_slot(trade_client, opt_data_client, slot_id: str,
                slot_state: dict, regime: dict,
                portfolio_value: float, today: date,
@@ -1510,7 +1523,7 @@ def enter_slot(trade_client, opt_data_client, slot_id: str,
     # Only enter during market hours
     if not is_market_open():
         log.info(f"  Slot {slot_id}: market closed — skipping entry, will retry next run")
-        slot_state["next_entry"] = (today + timedelta(days=1)).isoformat()
+        slot_state["next_entry"] = _next_trading_day(today)
         return slot_state
 
     # Safety: count already-open option legs for this ticker.
@@ -1522,7 +1535,7 @@ def enter_slot(trade_client, opt_data_client, slot_id: str,
         max_legs = 8   # 2 slots × 4 legs per condor
         if ticker_legs >= max_legs:
             log.warning(f"  Slot {slot_id}: {ticker_legs} {ticker} legs open already — skipping")
-            slot_state["next_entry"] = (today + timedelta(days=1)).isoformat()
+            slot_state["next_entry"] = _next_trading_day(today)
             return slot_state
     except Exception:
         pass
@@ -1536,7 +1549,7 @@ def enter_slot(trade_client, opt_data_client, slot_id: str,
         log.info(f"  Slot {slot_id}: SKIP — regime {skip_regime} is in skip-2 "
                  f"gate (neutral+high+expanding or bearish+low+expanding). "
                  f"Holding cash, will retry tomorrow.")
-        slot_state["next_entry"] = (today + timedelta(days=1)).isoformat()
+        slot_state["next_entry"] = _next_trading_day(today)
         return slot_state
 
     spread_name = regime["spread"]   # always "iron_condor"
@@ -1578,7 +1591,7 @@ def enter_slot(trade_client, opt_data_client, slot_id: str,
 
     if not short_put or not long_put:
         log.error(f"  Slot {slot_id}: could not find put contracts, skipping")
-        slot_state["next_entry"] = (today + timedelta(days=1)).isoformat()
+        slot_state["next_entry"] = _next_trading_day(today)
         return slot_state
 
     legs_info = [
@@ -1615,7 +1628,7 @@ def enter_slot(trade_client, opt_data_client, slot_id: str,
 
     if net_credit <= 0:
         log.warning(f"  Slot {slot_id}: zero/negative credit ${net_credit:.2f}, skipping")
-        slot_state["next_entry"] = (today + timedelta(days=1)).isoformat()
+        slot_state["next_entry"] = _next_trading_day(today)
         return slot_state
 
     # ── Gate 1: minimum absolute credit ──────────────────────
@@ -1624,7 +1637,7 @@ def enter_slot(trade_client, opt_data_client, slot_id: str,
     if net_credit < min_cr_abs:
         log.info(f"  Slot {slot_id}: credit ${net_credit:.3f} < minimum "
                  f"${min_cr_abs:.2f}/share (IV too low). Skipping — retry tomorrow.")
-        slot_state["next_entry"] = (today + timedelta(days=1)).isoformat()
+        slot_state["next_entry"] = _next_trading_day(today)
         return slot_state
 
     # CR ratio gate removed after optimisation — the $0.60 absolute credit
@@ -1639,7 +1652,7 @@ def enter_slot(trade_client, opt_data_client, slot_id: str,
                                    ticker=ticker)
     if contracts < 1:
         log.warning(f"  Slot {slot_id}: insufficient capital for 1 contract")
-        slot_state["next_entry"] = (today + timedelta(days=1)).isoformat()
+        slot_state["next_entry"] = _next_trading_day(today)
         return slot_state
 
     # ── Submit and read actual fill ──────────────────────────
@@ -1648,7 +1661,7 @@ def enter_slot(trade_client, opt_data_client, slot_id: str,
     if not order_id:
         # Order failed — gate slot until tomorrow so we retry with fresh quotes
         log.warning(f"  Slot {slot_id}: order failed, retrying next market session")
-        slot_state["next_entry"] = (today + timedelta(days=1)).isoformat()
+        slot_state["next_entry"] = _next_trading_day(today)
         return slot_state
 
     # Use the actual fill price for credit_received and max_loss.
@@ -1804,10 +1817,39 @@ def run():
             log.info(f"  Slot {slot_id}: no open position")
 
     # ── Open new positions ────────────────────────────────────
+    # Companion-slot stagger: after a slot enters, its same-ticker partner
+    # must be gated at least stagger_days later to prevent both slots from
+    # opening at the same underlying price on the same day (correlated risk).
+    #
+    # Pairs: IWM_A ↔ IWM_B,  XBI_A ↔ XBI_B
+    COMPANION = {"IWM_A":"IWM_B","IWM_B":"IWM_A","XBI_A":"XBI_B","XBI_B":"XBI_A"}
+    STAGGER   = timedelta(days=CONFIG["stagger_days"])
+
     log.info("Checking entry opportunities...")
     for slot_id, ticker, slot_risk in TICKER_SLOTS:
         slot_st = state["slots"][slot_id]
         if slot_st.get("position") is None:
+
+            # ── Companion stagger check ───────────────────────
+            # If the companion slot has an open position that entered within
+            # stagger_days, delay this slot to companion_entry + stagger_days.
+            companion_id  = COMPANION[slot_id]
+            companion_pos = state["slots"][companion_id].get("position")
+            if companion_pos:
+                comp_entry = date.fromisoformat(companion_pos["entry_date"])
+                earliest   = comp_entry + STAGGER
+                if today < earliest:
+                    gated_until = earliest.isoformat()
+                    # Only update if this would push next_entry later
+                    cur_ne = slot_st.get("next_entry")
+                    if not cur_ne or gated_until > cur_ne:
+                        slot_st["next_entry"] = gated_until
+                        log.info(f"  Slot {slot_id}: companion {companion_id} "
+                                 f"entered {comp_entry} — stagger gate until "
+                                 f"{gated_until} ({CONFIG['stagger_days']}d)")
+                    state["slots"][slot_id] = slot_st
+                    continue
+
             regime = regimes[ticker]
             # Override risk_pct for this specific slot
             cfg_override = {**CONFIG, "risk_pct": slot_risk}
