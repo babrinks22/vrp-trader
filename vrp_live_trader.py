@@ -1594,6 +1594,14 @@ def enter_slot(trade_client, opt_data_client, slot_id: str,
         slot_state["next_entry"] = _next_trading_day(today)
         return slot_state
 
+    # Sanity check: long put must be BELOW short put
+    if long_put["strike"] >= short_put["strike"]:
+        log.warning(f"  Slot {slot_id}: put spread inverted — "
+                    f"long put ${long_put['strike']} ≥ short put "
+                    f"${short_put['strike']}. Skipping entry.")
+        slot_state["next_entry"] = _next_trading_day(today)
+        return slot_state
+
     legs_info = [
         {"symbol": short_put["symbol"], "side": "sell"},
         {"symbol": long_put["symbol"],  "side": "buy"},
@@ -1615,6 +1623,15 @@ def enter_slot(trade_client, opt_data_client, slot_id: str,
         long_call  = find_contract(trade_client, opt_data_client, ticker, "call",
                                    params["call_delta"] * 0.5, call_long_target, target_expiry)
 
+        # Sanity check: long call must be ABOVE short call (otherwise spread is
+        # inverted — find_contract snapped to wrong strikes on a thin chain).
+        if short_call and long_call:
+            if long_call["strike"] <= short_call["strike"]:
+                log.warning(f"  Slot {slot_id}: call spread inverted — "
+                            f"long call ${long_call['strike']} ≤ short call "
+                            f"${short_call['strike']}. Dropping call side.")
+                short_call = long_call = None
+
         if short_call and long_call:
             legs_info  += [{"symbol": short_call["symbol"], "side": "sell"},
                            {"symbol": long_call["symbol"],  "side": "buy"}]
@@ -1627,7 +1644,8 @@ def enter_slot(trade_client, opt_data_client, slot_id: str,
             log.warning(f"  Slot {slot_id}: call contracts not found, using put spread only")
 
     if net_credit <= 0:
-        log.warning(f"  Slot {slot_id}: zero/negative credit ${net_credit:.2f}, skipping")
+        log.warning(f"  Slot {slot_id}: zero/negative credit ${net_credit:.2f} — "
+                    f"likely inverted strike snap on thin options chain. Skipping.")
         slot_state["next_entry"] = _next_trading_day(today)
         return slot_state
 
