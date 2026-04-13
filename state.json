@@ -1,32 +1,8 @@
 {
   "slots": {
     "IWM_A": {
-      "position": {
-        "entry_date": "2026-04-08",
-        "expiry": "2026-04-20",
-        "spread": "iron_condor",
-        "trend_regime": "neutral",
-        "vol_regime": "low",
-        "atr_regime": "contracting",
-        "contracts": 12,
-        "credit_received": 1.295,
-        "max_loss": 13.705,
-        "leg_symbols": [
-          "IWM260420P00249000",
-          "IWM260420P00234000",
-          "IWM260420C00275000",
-          "IWM260420C00290000"
-        ],
-        "leg_sides": [
-          true,
-          false,
-          true,
-          false
-        ],
-        "order_id": "00a22975-fc0b-49b1-8f54-f367eaa8f5b2",
-        "underlying_px": 260.57501220703125
-      },
-      "next_entry": null,
+      "position": null,
+      "next_entry": "2026-04-14",
       "closed_trades": [
         {
           "entry_date": "2026-03-27",
@@ -55,40 +31,74 @@
           "close_date": "2026-04-07",
           "close_reason": "dte_exit",
           "realized_pnl": 2355.0
+        },
+        {
+          "entry_date": "2026-04-08",
+          "expiry": "2026-04-20",
+          "spread": "iron_condor",
+          "trend_regime": "neutral",
+          "vol_regime": "low",
+          "atr_regime": "contracting",
+          "contracts": 12,
+          "credit_received": 1.295,
+          "max_loss": 13.705,
+          "leg_symbols": [
+            "IWM260420P00249000",
+            "IWM260420P00234000",
+            "IWM260420C00275000",
+            "IWM260420C00290000"
+          ],
+          "leg_sides": [
+            true,
+            false,
+            true,
+            false
+          ],
+          "order_id": "00a22975-fc0b-49b1-8f54-f367eaa8f5b2",
+          "underlying_px": 260.57501220703125,
+          "close_date": "2026-04-13",
+          "close_reason": "profit_target",
+          "realized_pnl": 1073.9999999999998
         }
       ]
     },
     "IWM_B": {
-      "position": {
-        "entry_date": "2026-04-03",
-        "expiry": "2026-04-14",
-        "spread": "iron_condor",
-        "trend_regime": "neutral",
-        "vol_regime": "low",
-        "atr_regime": "expanding",
-        "contracts": 26,
-        "credit_received": 1.31,
-        "max_loss": 6.69,
-        "leg_symbols": [
-          "IWM260414P00240000",
-          "IWM260414P00232000",
-          "IWM260414C00265000",
-          "IWM260414C00273000"
-        ],
-        "leg_sides": [
-          true,
-          false,
-          true,
-          false
-        ],
-        "order_id": "e59cbbbb-cc7a-4bfd-ae2b-847cf1596791",
-        "underlying_px": 251.2899932861328
-      },
-      "next_entry": null
+      "position": null,
+      "next_entry": "2026-04-14",
+      "closed_trades": [
+        {
+          "entry_date": "2026-04-03",
+          "expiry": "2026-04-14",
+          "spread": "iron_condor",
+          "trend_regime": "neutral",
+          "vol_regime": "low",
+          "atr_regime": "expanding",
+          "contracts": 26,
+          "credit_received": 1.31,
+          "max_loss": 6.69,
+          "leg_symbols": [
+            "IWM260414P00240000",
+            "IWM260414P00232000",
+            "IWM260414C00265000",
+            "IWM260414C00273000"
+          ],
+          "leg_sides": [
+            true,
+            false,
+            true,
+            false
+          ],
+          "order_id": "e59cbbbb-cc7a-4bfd-ae2b-847cf1596791",
+          "underlying_px": 251.2899932861328,
+          "close_date": "2026-04-13",
+          "close_reason": "dte_exit",
+          "realized_pnl": 1664.0
+        }
+      ]
     },
     "XBI_A": {
       "position": null,
-      "next_entry": "2026-04-11",
+      "next_entry": "2026-04-14",
       "closed_trades": [
         {
           "entry_date": "2026-03-27",
@@ -122,7 +132,7 @@
     },
     "XBI_B": {
       "position": null,
-      "next_entry": "2026-04-13",
+      "next_entry": "2026-04-14",
       "closed_trades": [
         {
           "entry_date": "2026-04-03",

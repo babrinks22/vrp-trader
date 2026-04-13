@@ -434,3 +434,52 @@
 2026-04-10 16:37:23,228  INFO  Generating portfolio equity chart...
 2026-04-10 16:37:23,565  INFO    Portfolio chart saved: diagrams/portfolio_equity.png  (value=$101,852, PnL=+$2,831)
 2026-04-10 16:37:23,565  INFO  Done.
+2026-04-13 17:41:10,079  INFO  ============================================================
+2026-04-13 17:41:10,079  INFO  VRP Live Trader — 2026-04-13  PAPER
+2026-04-13 17:41:10,079  INFO  ============================================================
+2026-04-13 17:41:10,309  INFO  Portfolio (last equity):   $101,749.12  (Paper)
+2026-04-13 17:41:10,309  INFO  Portfolio (live MTM):      $101,624.74  (not used for sizing — includes option bid-ask drag)
+2026-04-13 17:41:10,309  INFO  Computing regimes...
+2026-04-13 17:41:11,052  INFO    IWM: Trend=neutral  Vol=low  ATR=contracting  → iron_condor
+2026-04-13 17:41:11,052  INFO      $263.82  VIX=19.7  HV=24.3%
+2026-04-13 17:41:11,448  INFO    XBI: Trend=neutral  Vol=low  ATR=contracting  → iron_condor
+2026-04-13 17:41:11,448  INFO      $131.26  VIX=19.7  HV=36.8%
+2026-04-13 17:41:11,448  INFO  Managing open positions...
+2026-04-13 17:41:11,448  INFO    Slot IWM_A: iron_condor  DTE=7  held=5d  credit=$1.29
+2026-04-13 17:41:11,819  INFO    Slot IWM_A: profit target  profit=$0.89 >= target=$0.84
+2026-04-13 17:41:11,955  INFO    Closed leg: IWM260420P00249000
+2026-04-13 17:41:12,023  INFO    Closed leg: IWM260420P00234000
+2026-04-13 17:41:12,093  INFO    Closed leg: IWM260420C00275000
+2026-04-13 17:41:12,093  INFO    Leg IWM260420C00290000: value $0.010/share < $0.03 — letting expire worthless
+2026-04-13 17:41:12,094  INFO    All 4/4 legs closed successfully.
+2026-04-13 17:41:12,094  INFO    Closed: profit_target  P&L=$1,074.00
+2026-04-13 17:41:12,094  INFO    Slot IWM_B: iron_condor  DTE=1  held=10d  credit=$1.31
+2026-04-13 17:41:12,094  INFO    Slot IWM_B: DTE exit (dte=1)
+2026-04-13 17:41:12,160  INFO    Leg IWM260414P00240000: value $0.010/share < $0.03 — letting expire worthless
+2026-04-13 17:41:12,160  INFO    Leg IWM260414P00232000: value $0.000/share < $0.03 — letting expire worthless
+2026-04-13 17:41:12,228  INFO    Closed leg: IWM260414C00265000
+2026-04-13 17:41:12,228  INFO    Leg IWM260414C00273000: value $0.010/share < $0.03 — letting expire worthless
+2026-04-13 17:41:12,228  INFO    All 4/4 legs closed successfully.
+2026-04-13 17:41:12,295  INFO    Closed: dte_exit  P&L=$1,664.00
+2026-04-13 17:41:12,295  INFO    Slot XBI_A: no open position
+2026-04-13 17:41:12,295  INFO    Slot XBI_B: no open position
+2026-04-13 17:41:12,295  INFO  Checking entry opportunities...
+2026-04-13 17:41:12,295  INFO    Slot IWM_A: gated until 2026-04-14
+2026-04-13 17:41:12,295  INFO    Slot IWM_B: gated until 2026-04-14
+2026-04-13 17:41:12,360  INFO    Slot XBI_A: entering iron_condor  regime=neutral+low+contracting  target_expiry=2026-04-27
+2026-04-13 17:41:12,965  WARNING    Slot XBI_A: zero/negative credit $-1.14, skipping
+2026-04-13 17:41:13,033  INFO    Slot XBI_B: entering iron_condor  regime=neutral+low+contracting  target_expiry=2026-04-27
+2026-04-13 17:41:13,562  WARNING    Slot XBI_B: zero/negative credit $-1.14, skipping
+2026-04-13 17:41:13,563  INFO  State saved.
+2026-04-13 17:41:13,563  INFO  ────────────────────────────────────────────────────────────
+2026-04-13 17:41:13,563  INFO    Slot IWM_A (IWM 17.5%): EMPTY  next: 2026-04-14
+2026-04-13 17:41:13,563  INFO    Slot IWM_B (IWM 17.5%): EMPTY  next: 2026-04-14
+2026-04-13 17:41:13,563  INFO    Slot XBI_A (XBI 22.5%): EMPTY  next: 2026-04-14
+2026-04-13 17:41:13,563  INFO    Slot XBI_B (XBI 22.5%): EMPTY  next: 2026-04-14
+2026-04-13 17:41:13,564  INFO    Portfolio: $101,749  |  Cash reserve ~20%
+2026-04-13 17:41:13,564  INFO  Generating daily live diagrams...
+2026-04-13 17:41:13,960  INFO  Failed to extract font properties from /usr/share/fonts/truetype/noto/NotoColorEmoji.ttf: Can not load face (unknown file format; error code 0x2)
+2026-04-13 17:41:14,014  INFO  generated new fontManager
+2026-04-13 17:41:14,197  INFO  Generating portfolio equity chart...
+2026-04-13 17:41:14,541  INFO    Portfolio chart saved: diagrams/portfolio_equity.png  (value=$101,749, PnL=+$2,728)
+2026-04-13 17:41:14,542  INFO  Done.
