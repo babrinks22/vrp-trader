@@ -1391,7 +1391,7 @@ def update_portfolio_chart(portfolio_value: float, state: dict, today: date):
 
 def manage_slot(trade_client, opt_data_client, slot_id: str,
                 slot_state: dict, portfolio_value: float,
-                today: date) -> dict:
+                today: date, state: dict = None) -> dict:
     """
     Check if open position needs to be closed.
     Returns updated slot_state.
@@ -1413,7 +1413,7 @@ def manage_slot(trade_client, opt_data_client, slot_id: str,
         log.info(f"  Slot {slot_id}: DTE exit (dte={dte})")
         if close_position_by_legs(trade_client, pos):
             pnl = _estimate_close_pnl(opt_data_client, pos, "dte_exit")
-            _record_close(slot_state, today, "dte_exit", pnl)
+            _record_close(slot_state, today, "dte_exit", pnl, slot_id=slot_id, state=state)
     # Rule 2: profit target
     elif days_held >= CONFIG["min_hold_days"]:
         current_value = _get_spread_value(opt_data_client, pos)
@@ -1425,7 +1425,7 @@ def manage_slot(trade_client, opt_data_client, slot_id: str,
                          f"profit=${profit:.2f} >= target=${target:.2f}")
                 if close_position_by_legs(trade_client, pos):
                     pnl = profit * pos["contracts"] * 100
-                    _record_close(slot_state, today, "profit_target", pnl)
+                    _record_close(slot_state, today, "profit_target", pnl, slot_id=slot_id, state=state)
 
     return slot_state
 
@@ -1457,15 +1457,53 @@ def _estimate_close_pnl(opt_data_client, pos: dict, reason: str) -> float:
     return (pos["credit_received"] - val) * pos["contracts"] * 100
 
 
-def _record_close(slot_state: dict, today: date, reason: str, pnl: float):
-    slot_state["position"]["close_date"]   = today.isoformat()
-    slot_state["position"]["close_reason"] = reason
-    slot_state["position"]["realized_pnl"] = pnl
+def _record_close(slot_state: dict, today: date, reason: str, pnl: float,
+                  slot_id: str = "", state: dict = None):
+    """Record close in slot_state, write to trade_log.csv, update counters."""
+    pos = slot_state["position"]
+    pos["close_date"]   = today.isoformat()
+    pos["close_reason"] = reason
+    pos["realized_pnl"] = pnl
+
     slot_state["closed_trades"] = slot_state.get("closed_trades", [])
-    slot_state["closed_trades"].append(dict(slot_state["position"]))
-    slot_state["position"]        = None
-    slot_state["next_entry"]      = _next_trading_day(today)
-    log.info(f"  Closed: {reason}  P&L=${pnl:,.2f}")
+    slot_state["closed_trades"].append(dict(pos))
+    slot_state["position"]   = None
+    slot_state["next_entry"] = _next_trading_day(today)
+
+    # Write close row to trade_log.csv
+    try:
+        entry_d = date.fromisoformat(pos["entry_date"])
+        days_h  = (today - entry_d).days
+    except Exception:
+        days_h  = ""
+    log_trade({
+        "date":           today.isoformat(),
+        "action":         "close",
+        "slot":           slot_id,
+        "spread":         pos.get("spread", ""),
+        "trend":          pos.get("trend_regime", ""),
+        "vol":            pos.get("vol_regime", ""),
+        "atr":            pos.get("atr_regime", ""),
+        "contracts":      pos.get("contracts", 0),
+        "credit":         pos.get("credit_received", 0),
+        "max_loss":       pos.get("max_loss", 0),
+        "underlying_px":  "",
+        "close_reason":   reason,
+        "realized_pnl":   round(pnl, 2),
+        "entry_date":     pos.get("entry_date", ""),
+        "days_held":      days_h,
+        "order_id":       pos.get("order_id", ""),
+    })
+
+    # Update global state counters
+    if state is not None:
+        state["cumulative_pnl"] = round(state.get("cumulative_pnl", 0.0) + pnl, 2)
+        state["trade_count"]    = state.get("trade_count", 0) + 1
+        log.info(f"  Closed: {reason}  P&L=${pnl:,.2f}  |  "
+                 f"cumulative=${state['cumulative_pnl']:,.2f}  "
+                 f"trades={state['trade_count']}")
+    else:
+        log.info(f"  Closed: {reason}  P&L=${pnl:,.2f}")
 
 
 # ══════════════════════════════════════════════════════════════
@@ -1829,7 +1867,8 @@ def run():
         slot_st = state["slots"][slot_id]
         if slot_st.get("position"):
             updated = manage_slot(trade_client, opt_data,
-                                  slot_id, slot_st, portfolio_value, today)
+                                  slot_id, slot_st, portfolio_value, today,
+                                  state=state)
             state["slots"][slot_id] = updated
         else:
             log.info(f"  Slot {slot_id}: no open position")
