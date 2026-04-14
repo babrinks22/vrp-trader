@@ -1,8 +1,33 @@
 {
   "slots": {
     "IWM_A": {
-      "position": null,
-      "next_entry": "2026-04-14",
+      "position": {
+        "entry_date": "2026-04-14",
+        "expiry": "2026-04-27",
+        "spread": "iron_condor",
+        "trend_regime": "neutral",
+        "vol_regime": "low",
+        "atr_regime": "expanding",
+        "contracts": 12,
+        "credit_received": 1.05,
+        "credit_mid": 1.06,
+        "max_loss": 13.95,
+        "leg_symbols": [
+          "IWM260427P00257000",
+          "IWM260427P00242000",
+          "IWM260427C00285000",
+          "IWM260427C00300000"
+        ],
+        "leg_sides": [
+          true,
+          false,
+          true,
+          false
+        ],
+        "order_id": "a5aa02de-7df5-4bd5-98da-99409c3db32c",
+        "underlying_px": 268.5799865722656
+      },
+      "next_entry": null,
       "closed_trades": [
         {
           "entry_date": "2026-03-27",
@@ -64,7 +89,7 @@
     },
     "IWM_B": {
       "position": null,
-      "next_entry": "2026-04-14",
+      "next_entry": "2026-04-21",
       "closed_trades": [
         {
           "entry_date": "2026-04-03",
@@ -98,7 +123,7 @@
     },
     "XBI_A": {
       "position": null,
-      "next_entry": "2026-04-14",
+      "next_entry": "2026-04-15",
       "closed_trades": [
         {
           "entry_date": "2026-03-27",
@@ -132,7 +157,7 @@
     },
     "XBI_B": {
       "position": null,
-      "next_entry": "2026-04-14",
+      "next_entry": "2026-04-15",
       "closed_trades": [
         {
           "entry_date": "2026-04-03",
