@@ -672,3 +672,48 @@
 
 2026-04-20 17:37:39,480  INFO    Portfolio chart saved: diagrams/portfolio_equity.png  (value=$102,151, PnL=+$3,130)
 2026-04-20 17:37:39,480  INFO  Done.
+2026-04-21 17:36:53,309  INFO  ============================================================
+2026-04-21 17:36:53,309  INFO  VRP Live Trader — 2026-04-21  PAPER
+2026-04-21 17:36:53,309  INFO  ============================================================
+2026-04-21 17:36:54,373  INFO  Portfolio (last equity):   $102,037.07  (Paper)
+2026-04-21 17:36:54,373  INFO  Portfolio (live MTM):      $102,145.07  (not used for sizing — includes option bid-ask drag)
+2026-04-21 17:36:54,374  INFO  Computing regimes...
+2026-04-21 17:36:55,342  INFO    IWM: Trend=bullish  Vol=mid  ATR=contracting  → iron_condor
+2026-04-21 17:36:55,342  INFO      $274.96  VIX=20.6  HV=21.9%
+2026-04-21 17:36:55,641  INFO    XBI: Trend=bullish  Vol=mid  ATR=contracting  → iron_condor
+2026-04-21 17:36:55,641  INFO      $136.34  VIX=20.6  HV=36.7%
+2026-04-21 17:36:55,641  INFO  Managing open positions...
+2026-04-21 17:36:55,641  INFO    Slot IWM_A: iron_condor  DTE=6  held=7d  credit=$1.05
+2026-04-21 17:36:55,885  INFO    Slot IWM_B: no open position
+2026-04-21 17:36:55,885  INFO    Slot XBI_A: no open position
+2026-04-21 17:36:55,885  INFO    Slot XBI_B: no open position
+2026-04-21 17:36:55,885  INFO  Checking entry opportunities...
+2026-04-21 17:36:55,960  INFO    Slot IWM_B: entering iron_condor  regime=bullish+mid+contracting  target_expiry=2026-05-05
+2026-04-21 17:36:56,822  INFO    Slot IWM_B: credit quality OK — $2.060/share
+2026-04-21 17:36:56,899  INFO    Order submitted: e766d3a5-0619-4d02-b575-c62d3b25c2df  limit=$2.06  qty=16  attempt=1
+2026-04-21 17:37:11,972  INFO    Fill confirmed (mleg avg): $1.9100/share  (limit was $2.06, slippage 7.3%)
+2026-04-21 17:37:11,972  INFO    Slot IWM_B: fill slippage $2.0600 (mid) → $1.9100 (fill)  = 7.3%
+2026-04-21 17:37:12,441  INFO  Failed to extract font properties from /usr/share/fonts/truetype/noto/NotoColorEmoji.ttf: Can not load face (unknown file format; error code 0x2)
+2026-04-21 17:37:12,481  INFO  generated new fontManager
+2026-04-21 17:37:13,772  INFO    Diagram saved: diagrams/2026-04-21_IWM_B_iron_condor.png
+2026-04-21 17:37:13,774  INFO    Spread logged: spread_log.csv
+2026-04-21 17:37:13,774  INFO    Slot IWM_B: opened iron_condor  16 contracts  credit=$1.9100 (mid $2.0600)  max_loss=$11.0900
+2026-04-21 17:37:13,846  INFO    Slot XBI_A: entering iron_condor  regime=bullish+mid+contracting  target_expiry=2026-05-05
+2026-04-21 17:37:14,434  WARNING    Slot XBI_A: zero/negative credit $-0.29 — likely inverted strike snap on thin options chain. Skipping.
+2026-04-21 17:37:14,508  INFO    Slot XBI_B: entering iron_condor  regime=bullish+mid+contracting  target_expiry=2026-05-05
+2026-04-21 17:37:15,070  WARNING    Slot XBI_B: zero/negative credit $-0.29 — likely inverted strike snap on thin options chain. Skipping.
+2026-04-21 17:37:15,071  INFO  State saved.
+2026-04-21 17:37:15,071  INFO  ────────────────────────────────────────────────────────────
+2026-04-21 17:37:15,071  INFO    Slot IWM_A (IWM 17.5%): OPEN — iron_condor  12 contracts  DTE=6  credit=$1.05
+2026-04-21 17:37:15,071  INFO    Slot IWM_B (IWM 17.5%): OPEN — iron_condor  16 contracts  DTE=13  credit=$1.91
+2026-04-21 17:37:15,071  INFO    Slot XBI_A (XBI 22.5%): EMPTY  next: 2026-04-22
+2026-04-21 17:37:15,071  INFO    Slot XBI_B (XBI 22.5%): EMPTY  next: 2026-04-22
+2026-04-21 17:37:15,072  INFO    Portfolio: $102,037  |  Cash reserve ~20%
+2026-04-21 17:37:15,072  INFO  Generating daily live diagrams...
+2026-04-21 17:37:16,131  INFO    Live diagram saved: diagrams/2026-04-21_IWM_A_live.png  (P&L +$498, 40% captured)
+2026-04-21 17:37:17,273  INFO    Live diagram saved: diagrams/2026-04-21_IWM_B_live.png  (P&L $-112, -4% captured)
+2026-04-21 17:37:17,274  INFO  Generating portfolio equity chart...
+2026-04-21 17:37:17,274  WARNING    Could not read trade log for portfolio chart: Error tokenizing data. C error: Expected 12 fields in line 7, saw 14
+
+2026-04-21 17:37:17,620  INFO    Portfolio chart saved: diagrams/portfolio_equity.png  (value=$102,037, PnL=+$3,016)
+2026-04-21 17:37:17,620  INFO  Done.
