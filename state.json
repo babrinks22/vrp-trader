@@ -1,33 +1,8 @@
 {
   "slots": {
     "IWM_A": {
-      "position": {
-        "entry_date": "2026-04-14",
-        "expiry": "2026-04-27",
-        "spread": "iron_condor",
-        "trend_regime": "neutral",
-        "vol_regime": "low",
-        "atr_regime": "expanding",
-        "contracts": 12,
-        "credit_received": 1.05,
-        "credit_mid": 1.06,
-        "max_loss": 13.95,
-        "leg_symbols": [
-          "IWM260427P00257000",
-          "IWM260427P00242000",
-          "IWM260427C00285000",
-          "IWM260427C00300000"
-        ],
-        "leg_sides": [
-          true,
-          false,
-          true,
-          false
-        ],
-        "order_id": "a5aa02de-7df5-4bd5-98da-99409c3db32c",
-        "underlying_px": 268.5799865722656
-      },
-      "next_entry": null,
+      "position": null,
+      "next_entry": "2026-04-28",
       "closed_trades": [
         {
           "entry_date": "2026-03-27",
@@ -84,6 +59,35 @@
           "close_date": "2026-04-13",
           "close_reason": "profit_target",
           "realized_pnl": 1073.9999999999998
+        },
+        {
+          "entry_date": "2026-04-14",
+          "expiry": "2026-04-27",
+          "spread": "iron_condor",
+          "trend_regime": "neutral",
+          "vol_regime": "low",
+          "atr_regime": "expanding",
+          "contracts": 12,
+          "credit_received": 1.05,
+          "credit_mid": 1.06,
+          "max_loss": 13.95,
+          "leg_symbols": [
+            "IWM260427P00257000",
+            "IWM260427P00242000",
+            "IWM260427C00285000",
+            "IWM260427C00300000"
+          ],
+          "leg_sides": [
+            true,
+            false,
+            true,
+            false
+          ],
+          "order_id": "a5aa02de-7df5-4bd5-98da-99409c3db32c",
+          "underlying_px": 268.5799865722656,
+          "close_date": "2026-04-22",
+          "close_reason": "profit_target",
+          "realized_pnl": 1014.0
         }
       ]
     },
@@ -148,7 +152,7 @@
     },
     "XBI_A": {
       "position": null,
-      "next_entry": "2026-04-22",
+      "next_entry": "2026-04-23",
       "closed_trades": [
         {
           "entry_date": "2026-03-27",
@@ -182,7 +186,7 @@
     },
     "XBI_B": {
       "position": null,
-      "next_entry": "2026-04-22",
+      "next_entry": "2026-04-23",
       "closed_trades": [
         {
           "entry_date": "2026-04-03",
@@ -216,6 +220,6 @@
     }
   },
   "initial_capital": 99021.51,
-  "cumulative_pnl": 0.0,
-  "trade_count": 0
+  "cumulative_pnl": 1014.0,
+  "trade_count": 1
 }
