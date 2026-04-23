@@ -104,7 +104,7 @@ CONFIG = {
 
     # ── Spread parameters ─────────────────────────────────────
     "spread_pct":      0.025,  # strike width as % of underlying (legacy — wings now IV-scaled)
-    "min_credit":      0.90,   # minimum net credit per share.
+    "min_credit":      0.00,   # minimum net credit per share.
                                # Derived from abs slippage model: $0.30 fixed
                                # bid-ask cost + $0.60 backtest-optimal net credit
                                # = $0.90 gross minimum. Passes all VIX≥15 fills;
