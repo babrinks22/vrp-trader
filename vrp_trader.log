@@ -829,3 +829,71 @@
 
 2026-04-23 18:05:53,032  INFO    Portfolio chart saved: diagrams/portfolio_equity.png  (value=$103,169, PnL=+$4,147)
 2026-04-23 18:05:53,032  INFO  Done.
+2026-04-24 16:42:14,609  INFO  ============================================================
+2026-04-24 16:42:14,609  INFO  VRP Live Trader — 2026-04-24  PAPER
+2026-04-24 16:42:14,609  INFO  ============================================================
+2026-04-24 16:42:14,978  INFO  Portfolio (last equity):   $103,696.85  (Paper)
+2026-04-24 16:42:14,979  INFO  Portfolio (live MTM):      $103,804.85  (not used for sizing — includes option bid-ask drag)
+2026-04-24 16:42:14,979  INFO  Computing regimes...
+2026-04-24 16:42:15,448  INFO    IWM: Trend=bullish  Vol=low  ATR=contracting  → iron_condor
+2026-04-24 16:42:15,448  INFO      $277.19  VIX=18.7  HV=20.5%
+2026-04-24 16:42:15,739  INFO    XBI: Trend=bullish  Vol=low  ATR=contracting  → iron_condor
+2026-04-24 16:42:15,739  INFO      $133.55  VIX=18.7  HV=35.3%
+2026-04-24 16:42:15,739  INFO  Managing open positions...
+2026-04-24 16:42:15,739  INFO    Slot IWM_A: no open position
+2026-04-24 16:42:15,739  INFO    Slot IWM_B: iron_condor  DTE=10  held=3d  credit=$1.91
+2026-04-24 16:42:16,091  INFO    Slot XBI_A: no open position
+2026-04-24 16:42:16,091  INFO    Slot XBI_B: no open position
+2026-04-24 16:42:16,091  INFO  Checking entry opportunities...
+2026-04-24 16:42:16,646  INFO    Slot XBI_A: entering iron_condor  regime=bullish+low+contracting  target_expiry=2026-05-08
+2026-04-24 16:42:17,448  INFO    Slot XBI_A: credit quality OK — $0.400/share
+2026-04-24 16:42:17,526  INFO    Order submitted: 0f5c37bf-b036-4bb0-b501-99d733a763a7  limit=$0.4  qty=24  attempt=1
+2026-04-24 16:42:32,602  INFO    Order 0f5c37bf-b036-4bb0-b501-99d733a763a7 status=orderstatus.new (poll 1/3, waiting 15s...)
+2026-04-24 16:42:47,676  INFO    Order 0f5c37bf-b036-4bb0-b501-99d733a763a7 status=orderstatus.new (poll 2/3, waiting 15s...)
+2026-04-24 16:43:02,750  INFO    Order 0f5c37bf-b036-4bb0-b501-99d733a763a7 status=orderstatus.new (poll 3/3, waiting 15s...)
+2026-04-24 16:43:02,750  INFO    Not filled — widening limit to $0.35 (attempt 2/3)
+2026-04-24 16:43:02,902  INFO    Order submitted: 6cbcea4a-c9ee-4f6e-9ce7-ca03657f31cc  limit=$0.35  qty=24  attempt=2
+2026-04-24 16:43:17,978  INFO    Order 6cbcea4a-c9ee-4f6e-9ce7-ca03657f31cc status=orderstatus.new (poll 1/3, waiting 15s...)
+2026-04-24 16:43:33,052  INFO    Order 6cbcea4a-c9ee-4f6e-9ce7-ca03657f31cc status=orderstatus.new (poll 2/3, waiting 15s...)
+2026-04-24 16:43:48,126  INFO    Order 6cbcea4a-c9ee-4f6e-9ce7-ca03657f31cc status=orderstatus.new (poll 3/3, waiting 15s...)
+2026-04-24 16:43:48,126  INFO    Not filled — widening limit to $0.30 (attempt 3/3)
+2026-04-24 16:43:48,279  INFO    Order submitted: 704d03e8-0bac-436c-909e-5fc6292e43aa  limit=$0.3  qty=24  attempt=3
+2026-04-24 16:44:03,354  INFO    Order 704d03e8-0bac-436c-909e-5fc6292e43aa status=orderstatus.new (poll 1/3, waiting 15s...)
+2026-04-24 16:44:18,428  INFO    Order 704d03e8-0bac-436c-909e-5fc6292e43aa status=orderstatus.new (poll 2/3, waiting 15s...)
+2026-04-24 16:44:33,503  INFO    Order 704d03e8-0bac-436c-909e-5fc6292e43aa status=orderstatus.new (poll 3/3, waiting 15s...)
+2026-04-24 16:44:33,503  ERROR    Spread order not filled after 3 attempts
+2026-04-24 16:44:33,503  WARNING    Slot XBI_A: order failed, retrying next market session
+2026-04-24 16:44:33,752  INFO    Slot XBI_B: entering iron_condor  regime=bullish+low+contracting  target_expiry=2026-05-08
+2026-04-24 16:44:35,820  INFO    Slot XBI_B: credit quality OK — $0.440/share
+2026-04-24 16:44:36,044  INFO    Order submitted: b07744d7-3d9b-43e8-aa15-862cc1d81a86  limit=$0.44  qty=24  attempt=1
+2026-04-24 16:44:51,122  INFO    Order b07744d7-3d9b-43e8-aa15-862cc1d81a86 status=orderstatus.new (poll 1/3, waiting 15s...)
+2026-04-24 16:45:06,197  INFO    Order b07744d7-3d9b-43e8-aa15-862cc1d81a86 status=orderstatus.new (poll 2/3, waiting 15s...)
+2026-04-24 16:45:21,685  INFO    Order b07744d7-3d9b-43e8-aa15-862cc1d81a86 status=orderstatus.new (poll 3/3, waiting 15s...)
+2026-04-24 16:45:21,685  INFO    Not filled — widening limit to $0.39 (attempt 2/3)
+2026-04-24 16:45:21,872  INFO    Order submitted: 419930e6-ea24-4ba8-ade3-9bdfca35046d  limit=$0.39  qty=24  attempt=2
+2026-04-24 16:45:36,947  INFO    Order 419930e6-ea24-4ba8-ade3-9bdfca35046d status=orderstatus.new (poll 1/3, waiting 15s...)
+2026-04-24 16:45:52,022  INFO    Order 419930e6-ea24-4ba8-ade3-9bdfca35046d status=orderstatus.new (poll 2/3, waiting 15s...)
+2026-04-24 16:46:07,333  INFO    Order 419930e6-ea24-4ba8-ade3-9bdfca35046d status=orderstatus.new (poll 3/3, waiting 15s...)
+2026-04-24 16:46:07,333  INFO    Not filled — widening limit to $0.34 (attempt 3/3)
+2026-04-24 16:46:07,486  INFO    Order submitted: 53f2aea7-35b6-43b0-96ab-ae8f0908a9c1  limit=$0.34  qty=24  attempt=3
+2026-04-24 16:46:22,561  INFO    Order 53f2aea7-35b6-43b0-96ab-ae8f0908a9c1 status=orderstatus.new (poll 1/3, waiting 15s...)
+2026-04-24 16:46:37,635  INFO    Order 53f2aea7-35b6-43b0-96ab-ae8f0908a9c1 status=orderstatus.new (poll 2/3, waiting 15s...)
+2026-04-24 16:46:52,728  INFO    Order 53f2aea7-35b6-43b0-96ab-ae8f0908a9c1 status=orderstatus.new (poll 3/3, waiting 15s...)
+2026-04-24 16:46:52,728  ERROR    Spread order not filled after 3 attempts
+2026-04-24 16:46:52,728  WARNING    Slot XBI_B: order failed, retrying next market session
+2026-04-24 16:46:52,729  INFO  State saved.
+2026-04-24 16:46:52,729  INFO  ────────────────────────────────────────────────────────────
+2026-04-24 16:46:52,729  INFO    Slot IWM_A (IWM 17.5%): EMPTY  next: 2026-04-28
+2026-04-24 16:46:52,729  INFO    Slot IWM_B (IWM 17.5%): OPEN — iron_condor  16 contracts  DTE=10  credit=$1.91
+2026-04-24 16:46:52,730  INFO    Slot XBI_A (XBI 22.5%): EMPTY  next: 2026-04-27
+2026-04-24 16:46:52,730  INFO    Slot XBI_B (XBI 22.5%): EMPTY  next: 2026-04-27
+2026-04-24 16:46:52,730  INFO    Portfolio: $103,697  |  Cash reserve ~20%
+2026-04-24 16:46:52,730  INFO  Generating daily live diagrams...
+2026-04-24 16:46:53,599  INFO  Failed to extract font properties from /usr/share/fonts/truetype/noto/NotoColorEmoji.ttf: Can not load face (unknown file format; error code 0x2)
+2026-04-24 16:46:54,393  INFO  generated new fontManager
+2026-04-24 16:46:55,857  INFO    Live diagram saved: diagrams/2026-04-24_IWM_B_live.png  (P&L +$1,344, 44% captured)
+2026-04-24 16:46:55,858  INFO  Generating portfolio equity chart...
+2026-04-24 16:46:55,859  WARNING    Could not read trade log for portfolio chart: Error tokenizing data. C error: Expected 12 fields in line 7, saw 14
+
+2026-04-24 16:46:56,194  INFO    Portfolio chart saved: diagrams/portfolio_equity.png  (value=$103,697, PnL=+$4,675)
+2026-04-24 16:46:56,194  INFO  Done.
