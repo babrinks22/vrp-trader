@@ -973,3 +973,54 @@
 
 2026-04-27 15:31:09,698  INFO    Portfolio chart saved: diagrams/portfolio_equity.png  (value=$104,385, PnL=+$5,363)
 2026-04-27 15:31:09,699  INFO  Done.
+2026-04-28 16:02:09,679  INFO  ============================================================
+2026-04-28 16:02:09,679  INFO  VRP Live Trader — 2026-04-28  PAPER
+2026-04-28 16:02:09,679  INFO  ============================================================
+2026-04-28 16:02:09,743  INFO  Portfolio (last equity):   $104,530.55  (Paper)
+2026-04-28 16:02:09,743  INFO  Portfolio (live MTM):      $104,506.55  (not used for sizing — includes option bid-ask drag)
+2026-04-28 16:02:09,744  INFO  Computing regimes...
+2026-04-28 16:02:10,300  INFO    IWM: Trend=bullish  Vol=low  ATR=contracting  → iron_condor
+2026-04-28 16:02:10,300  INFO      $273.65  VIX=18.6  HV=18.4%
+2026-04-28 16:02:10,651  INFO    XBI: Trend=neutral  Vol=low  ATR=contracting  → iron_condor
+2026-04-28 16:02:10,651  INFO      $131.67  VIX=18.6  HV=32.6%
+2026-04-28 16:02:10,651  INFO  Managing open positions...
+2026-04-28 16:02:10,651  INFO    Slot IWM_A: no open position
+2026-04-28 16:02:10,651  INFO    Slot IWM_B: no open position
+2026-04-28 16:02:10,651  INFO    Slot XBI_A: no open position
+2026-04-28 16:02:10,651  INFO    Slot XBI_B: no open position
+2026-04-28 16:02:10,651  INFO  Checking entry opportunities...
+2026-04-28 16:02:10,688  INFO    Slot IWM_A: entering iron_condor  regime=bullish+low+contracting  target_expiry=2026-05-12
+2026-04-28 16:02:11,025  INFO    Slot IWM_A: credit quality OK — $2.150/share
+2026-04-28 16:02:11,042  INFO    Order submitted: 923d62f1-d5bb-4844-9a82-83e27ba584b4  limit=$2.15  qty=20  attempt=1
+2026-04-28 16:02:26,064  INFO    Fill confirmed (mleg avg): $2.0300/share  (limit was $2.15, slippage 5.6%)
+2026-04-28 16:02:26,064  INFO    Slot IWM_A: fill slippage $2.1500 (mid) → $2.0300 (fill)  = 5.6%
+2026-04-28 16:02:26,868  INFO  Failed to extract font properties from /usr/share/fonts/truetype/noto/NotoColorEmoji.ttf: Can not load face (unknown file format; error code 0x2)
+2026-04-28 16:02:27,647  INFO  generated new fontManager
+2026-04-28 16:02:28,990  INFO    Diagram saved: diagrams/2026-04-28_IWM_A_iron_condor.png
+2026-04-28 16:02:28,992  INFO    Spread logged: spread_log.csv
+2026-04-28 16:02:28,992  INFO    Slot IWM_A: opened iron_condor  20 contracts  credit=$2.0300 (mid $2.1500)  max_loss=$8.9700
+2026-04-28 16:02:28,992  INFO    Slot IWM_B: companion IWM_A entered 2026-04-28 — stagger gate until 2026-05-05 (7d)
+2026-04-28 16:02:29,006  INFO    Slot XBI_A: entering iron_condor  regime=neutral+low+contracting  target_expiry=2026-05-12
+2026-04-28 16:02:29,125  INFO    Slot XBI_A: credit quality OK — $1.655/share
+2026-04-28 16:02:29,143  INFO    Order submitted: 998c7e11-e2c5-4a41-b180-481da432780e  limit=$1.65  qty=28  attempt=1
+2026-04-28 16:02:44,157  INFO    Fill confirmed (mleg avg): $0.4500/share  (limit was $1.65, slippage 72.7%)
+2026-04-28 16:02:44,158  INFO    Slot XBI_A: fill slippage $1.6550 (mid) → $0.4500 (fill)  = 72.8%
+2026-04-28 16:02:45,192  INFO    Diagram saved: diagrams/2026-04-28_XBI_A_iron_condor.png
+2026-04-28 16:02:45,194  INFO    Spread logged: spread_log.csv
+2026-04-28 16:02:45,194  INFO    Slot XBI_A: opened iron_condor  28 contracts  credit=$0.4500 (mid $1.6550)  max_loss=$9.5500
+2026-04-28 16:02:45,194  INFO    Slot XBI_B: companion XBI_A entered 2026-04-28 — stagger gate until 2026-05-05 (7d)
+2026-04-28 16:02:45,195  INFO  State saved.
+2026-04-28 16:02:45,195  INFO  ────────────────────────────────────────────────────────────
+2026-04-28 16:02:45,195  INFO    Slot IWM_A (IWM 17.5%): OPEN — iron_condor  20 contracts  DTE=13  credit=$2.03
+2026-04-28 16:02:45,195  INFO    Slot IWM_B (IWM 17.5%): EMPTY  next: 2026-05-05
+2026-04-28 16:02:45,195  INFO    Slot XBI_A (XBI 22.5%): OPEN — iron_condor  28 contracts  DTE=17  credit=$0.45
+2026-04-28 16:02:45,195  INFO    Slot XBI_B (XBI 22.5%): EMPTY  next: 2026-05-05
+2026-04-28 16:02:45,195  INFO    Portfolio: $104,531  |  Cash reserve ~20%
+2026-04-28 16:02:45,195  INFO  Generating daily live diagrams...
+2026-04-28 16:02:46,278  INFO    Live diagram saved: diagrams/2026-04-28_IWM_A_live.png  (P&L $-150, -4% captured)
+2026-04-28 16:02:47,220  INFO    Live diagram saved: diagrams/2026-04-28_XBI_A_live.png  (P&L $-3,318, -263% captured)
+2026-04-28 16:02:47,220  INFO  Generating portfolio equity chart...
+2026-04-28 16:02:47,221  WARNING    Could not read trade log for portfolio chart: Error tokenizing data. C error: Expected 12 fields in line 7, saw 14
+
+2026-04-28 16:02:47,553  INFO    Portfolio chart saved: diagrams/portfolio_equity.png  (value=$104,531, PnL=+$5,509)
+2026-04-28 16:02:47,553  INFO  Done.

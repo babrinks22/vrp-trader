@@ -1,8 +1,33 @@
 {
   "slots": {
     "IWM_A": {
-      "position": null,
-      "next_entry": "2026-04-28",
+      "position": {
+        "entry_date": "2026-04-28",
+        "expiry": "2026-05-11",
+        "spread": "iron_condor",
+        "trend_regime": "bullish",
+        "vol_regime": "low",
+        "atr_regime": "contracting",
+        "contracts": 20,
+        "credit_received": 2.03,
+        "credit_mid": 2.15,
+        "max_loss": 8.97,
+        "leg_symbols": [
+          "IWM260511P00265000",
+          "IWM260511P00254000",
+          "IWM260511C00284000",
+          "IWM260511C00295000"
+        ],
+        "leg_sides": [
+          true,
+          false,
+          true,
+          false
+        ],
+        "order_id": "923d62f1-d5bb-4844-9a82-83e27ba584b4",
+        "underlying_px": 273.6499938964844
+      },
+      "next_entry": null,
       "closed_trades": [
         {
           "entry_date": "2026-03-27",
@@ -93,7 +118,7 @@
     },
     "IWM_B": {
       "position": null,
-      "next_entry": "2026-04-28",
+      "next_entry": "2026-05-05",
       "closed_trades": [
         {
           "entry_date": "2026-04-03",
@@ -155,8 +180,33 @@
       ]
     },
     "XBI_A": {
-      "position": null,
-      "next_entry": "2026-04-28",
+      "position": {
+        "entry_date": "2026-04-28",
+        "expiry": "2026-05-15",
+        "spread": "iron_condor",
+        "trend_regime": "neutral",
+        "vol_regime": "low",
+        "atr_regime": "contracting",
+        "contracts": 28,
+        "credit_received": 0.45,
+        "credit_mid": 1.655,
+        "max_loss": 9.55,
+        "leg_symbols": [
+          "XBI260515P00124000",
+          "XBI260515P00114000",
+          "XBI260515C00141000",
+          "XBI260515C00150000"
+        ],
+        "leg_sides": [
+          true,
+          false,
+          true,
+          false
+        ],
+        "order_id": "998c7e11-e2c5-4a41-b180-481da432780e",
+        "underlying_px": 131.6699981689453
+      },
+      "next_entry": null,
       "closed_trades": [
         {
           "entry_date": "2026-03-27",
@@ -190,7 +240,7 @@
     },
     "XBI_B": {
       "position": null,
-      "next_entry": "2026-04-28",
+      "next_entry": "2026-05-05",
       "closed_trades": [
         {
           "entry_date": "2026-04-03",
