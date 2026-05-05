@@ -1156,3 +1156,49 @@
 
 2026-05-04 15:33:33,218  INFO    Portfolio chart saved: diagrams/portfolio_equity.png  (value=$104,473, PnL=+$5,452)
 2026-05-04 15:33:33,218  INFO  Done.
+2026-05-05 18:55:02,197  INFO  ============================================================
+2026-05-05 18:55:02,198  INFO  VRP Live Trader — 2026-05-05  PAPER
+2026-05-05 18:55:02,198  INFO  ============================================================
+2026-05-05 18:55:02,333  INFO  Portfolio (last equity):   $104,473.28  (Paper)
+2026-05-05 18:55:02,333  INFO  Portfolio (live MTM):      $101,209.28  (not used for sizing — includes option bid-ask drag)
+2026-05-05 18:55:02,333  INFO  Computing regimes...
+2026-05-05 18:55:03,488  INFO    IWM: Trend=bullish  Vol=low  ATR=expanding  → iron_condor
+2026-05-05 18:55:03,489  INFO      $282.65  VIX=17.3  HV=17.6%
+2026-05-05 18:55:04,139  INFO    XBI: Trend=neutral  Vol=low  ATR=expanding  → iron_condor
+2026-05-05 18:55:04,139  INFO      $133.23  VIX=17.3  HV=24.4%
+2026-05-05 18:55:04,139  INFO  Managing open positions...
+2026-05-05 18:55:04,139  INFO    Slot IWM_A: iron_condor  DTE=6  held=7d  credit=$2.03
+2026-05-05 18:55:04,537  INFO    Slot IWM_B: no open position
+2026-05-05 18:55:04,538  INFO    Slot XBI_A: iron_condor  DTE=10  held=7d  credit=$0.45
+2026-05-05 18:55:04,588  INFO    Slot XBI_B: no open position
+2026-05-05 18:55:04,588  INFO  Checking entry opportunities...
+2026-05-05 18:55:04,627  INFO    Slot IWM_B: entering iron_condor  regime=bullish+low+expanding  target_expiry=2026-05-19
+2026-05-05 18:55:04,899  INFO    Slot IWM_B: credit quality OK — $1.975/share
+2026-05-05 18:55:04,937  INFO    Order submitted: c1bffc9b-1e5b-4ba5-8f76-bc1b80cc41c1  limit=$1.98  qty=20  attempt=1
+2026-05-05 18:55:19,976  INFO    Fill confirmed (mleg avg): $1.8900/share  (limit was $1.98, slippage 4.5%)
+2026-05-05 18:55:19,976  INFO    Slot IWM_B: fill slippage $1.9750 (mid) → $1.8900 (fill)  = 4.3%
+2026-05-05 18:55:21,383  INFO  Failed to extract font properties from /usr/share/fonts/truetype/noto/NotoColorEmoji.ttf: Can not load face (unknown file format; error code 0x2)
+2026-05-05 18:55:21,871  INFO  generated new fontManager
+2026-05-05 18:55:23,076  INFO    Diagram saved: diagrams/2026-05-05_IWM_B_iron_condor.png
+2026-05-05 18:55:23,080  INFO    Spread logged: spread_log.csv
+2026-05-05 18:55:23,080  INFO    Slot IWM_B: opened iron_condor  20 contracts  credit=$1.8900 (mid $1.9750)  max_loss=$9.1100
+2026-05-05 18:55:23,113  INFO    Slot XBI_B: entering iron_condor  regime=neutral+low+expanding  target_expiry=2026-05-19
+2026-05-05 18:55:23,378  INFO    Slot XBI_B: credit quality OK — $1.890/share
+2026-05-05 18:55:23,411  ERROR    Order submission failed (attempt 1): {"code":40310000,"cost_basis":"43194","message":"insufficient options buying power","options_buying_power":"40595.68"}
+2026-05-05 18:55:23,411  WARNING    Slot XBI_B: order failed, retrying next market session
+2026-05-05 18:55:23,412  INFO  State saved.
+2026-05-05 18:55:23,412  INFO  ────────────────────────────────────────────────────────────
+2026-05-05 18:55:23,412  INFO    Slot IWM_A (IWM 17.5%): OPEN — iron_condor  20 contracts  DTE=6  credit=$2.03
+2026-05-05 18:55:23,412  INFO    Slot IWM_B (IWM 17.5%): OPEN — iron_condor  20 contracts  DTE=13  credit=$1.89
+2026-05-05 18:55:23,412  INFO    Slot XBI_A (XBI 22.5%): OPEN — iron_condor  28 contracts  DTE=10  credit=$0.45
+2026-05-05 18:55:23,412  INFO    Slot XBI_B (XBI 22.5%): EMPTY  next: 2026-05-06
+2026-05-05 18:55:23,412  INFO    Portfolio: $104,473  |  Cash reserve ~20%
+2026-05-05 18:55:23,412  INFO  Generating daily live diagrams...
+2026-05-05 18:55:24,291  INFO    Live diagram saved: diagrams/2026-05-05_IWM_A_live.png  (P&L $-280, -7% captured)
+2026-05-05 18:55:25,361  INFO    Live diagram saved: diagrams/2026-05-05_IWM_B_live.png  (P&L $-70, -2% captured)
+2026-05-05 18:55:26,273  INFO    Live diagram saved: diagrams/2026-05-05_XBI_A_live.png  (P&L $-1,540, -122% captured)
+2026-05-05 18:55:26,273  INFO  Generating portfolio equity chart...
+2026-05-05 18:55:26,274  WARNING    Could not read trade log for portfolio chart: Error tokenizing data. C error: Expected 12 fields in line 7, saw 14
+
+2026-05-05 18:55:26,583  INFO    Portfolio chart saved: diagrams/portfolio_equity.png  (value=$104,473, PnL=+$5,452)
+2026-05-05 18:55:26,583  INFO  Done.

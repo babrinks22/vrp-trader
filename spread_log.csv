@@ -8,3 +8,4 @@ date,slot,spread,trend_regime,vol_regime,atr_regime,underlying_px,net_credit,max
 2026-04-21,IWM_B,iron_condor,bullish,mid,contracting,274.96,1.91,11.09,16,2026-05-04,diagrams/2026-04-21_IWM_B_iron_condor.png,S put $264 | L put $251 | S call $288 | L call $300
 2026-04-28,IWM_A,iron_condor,bullish,low,contracting,273.65,2.03,8.97,20,2026-05-11,diagrams/2026-04-28_IWM_A_iron_condor.png,S put $265 | L put $254 | S call $284 | L call $295
 2026-04-28,XBI_A,iron_condor,neutral,low,contracting,131.67,0.45,9.55,28,2026-05-15,diagrams/2026-04-28_XBI_A_iron_condor.png,S put $124 | L put $114 | S call $141 | L call $150
+2026-05-05,IWM_B,iron_condor,bullish,low,expanding,282.65,1.89,9.11,20,2026-05-18,diagrams/2026-05-05_IWM_B_iron_condor.png,S put $274 | L put $262 | S call $292 | L call $300

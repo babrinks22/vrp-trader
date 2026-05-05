@@ -117,8 +117,33 @@
       ]
     },
     "IWM_B": {
-      "position": null,
-      "next_entry": "2026-05-05",
+      "position": {
+        "entry_date": "2026-05-05",
+        "expiry": "2026-05-18",
+        "spread": "iron_condor",
+        "trend_regime": "bullish",
+        "vol_regime": "low",
+        "atr_regime": "expanding",
+        "contracts": 20,
+        "credit_received": 1.89,
+        "credit_mid": 1.975,
+        "max_loss": 9.11,
+        "leg_symbols": [
+          "IWM260518P00274000",
+          "IWM260518P00262500",
+          "IWM260518C00292500",
+          "IWM260518C00300000"
+        ],
+        "leg_sides": [
+          true,
+          false,
+          true,
+          false
+        ],
+        "order_id": "c1bffc9b-1e5b-4ba5-8f76-bc1b80cc41c1",
+        "underlying_px": 282.6499938964844
+      },
+      "next_entry": null,
       "closed_trades": [
         {
           "entry_date": "2026-04-03",
@@ -240,7 +265,7 @@
     },
     "XBI_B": {
       "position": null,
-      "next_entry": "2026-05-05",
+      "next_entry": "2026-05-06",
       "closed_trades": [
         {
           "entry_date": "2026-04-03",
