@@ -296,6 +296,16 @@
           "realized_pnl": 3942.0
         }
       ]
+    },
+    "IWM_C": {
+      "position": null,
+      "next_entry": "2026-05-20",
+      "closed_trades": []
+    },
+    "IWM_D": {
+      "position": null,
+      "next_entry": "2026-05-27",
+      "closed_trades": []
     }
   },
   "initial_capital": 99021.51,
