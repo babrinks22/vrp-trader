@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 # ============================================================
 #  VRP Live Trader — Alpaca
-#  60% SPY buy-and-hold  +  20%/slot IWM options (2 slots)
+#  4×IWM iron condor, 30 DTE, 65% profit target, skip-2 gate
 #
 #  Install:
-#    pip install alpaca-py yfinance numpy pandas scipy
+#    pip install alpaca-py yfinance numpy pandas scipy matplotlib
 #
 #  Setup:
 #    1. Create a free account at alpaca.markets
@@ -77,21 +77,22 @@ PAPER      = os.environ.get("ALPACA_PAPER", "true").lower() != "false"
 
 CONFIG = {
     # ── Portfolio allocation ──────────────────────────────────
-    # No SPY — all-options portfolio
-    # IWM: 17.5% per slot × 2 slots = 35%
-    # XBI: 22.5% per slot × 2 slots = 45%
-    # Cash reserve: 20% (buffer + future XLE allocation)
-    "iwm_slot_risk":   0.175,  # 17.5% per slot  (84% of half-Kelly)
-    "xbi_slot_risk":   0.225,  # 22.5% per slot  (62% of half-Kelly)
+    # IWM only — 4 slots × 17.5% = 70% deployed, 30% cash reserve
+    # Why IWM only: cleaner fills at 2c per slot, no inverted-strike chain
+    # issues, lower slippage (12% vs 44-57% for XBI at small size)
+    "iwm_slot_risk":   0.175,  # 17.5% per slot (4 slots = 70% deployed)
 
     # ── Options parameters ────────────────────────────────────
-    "slot_dte":        14,     # target DTE at entry
+    "slot_dte":        30,     # target DTE at entry — 30 DTE optimal:
+                               # (1) fewer trades/yr → fewer fees
+                               # (2) more legs expire worthless on Alpaca ($0 close)
+                               # (3) more time for position to recover before expiry
     "dte_tolerance":   3,      # accept contracts within ±3 DTE of target
     "exit_dte":        3,      # force-close at ≤3 DTE
     "min_hold_days":   3,      # minimum days before profit target fires
     "profit_target":   0.65,   # close at 65% of credit — optimal by Sharpe (19yr backtest)
                                # improves Sharpe 0.50→1.46 at live sizing, MaxDD -3.7%→-1.2%
-    "stagger_days":    7,      # Slot B opens 7 days after Slot A
+    "stagger_days":    7,      # Minimum days between any two same-ticker entries
 
     # ── Regime signals ────────────────────────────────────────
     "trend_fast":      20,     # SMA fast period
@@ -104,7 +105,7 @@ CONFIG = {
 
     # ── Spread parameters ─────────────────────────────────────
     "spread_pct":      0.025,  # strike width as % of underlying (legacy — wings now IV-scaled)
-    "min_credit":      0.00,   # minimum net credit per share.
+    "min_credit":      0.90,   # minimum net credit per share.
                                # Derived from abs slippage model: $0.30 fixed
                                # bid-ask cost + $0.60 backtest-optimal net credit
                                # = $0.90 gross minimum. Passes all VIX≥15 fills;
@@ -224,10 +225,10 @@ def load_state() -> dict:
             return json.load(f)
     return {
         "slots": {
-            "IWM_A": {"position": None, "next_entry": None},
-            "IWM_B": {"position": None, "next_entry": None},
-            "XBI_A": {"position": None, "next_entry": None},
-            "XBI_B": {"position": None, "next_entry": None},
+            "IWM_A": {"position": None, "next_entry": None, "closed_trades": []},
+            "IWM_B": {"position": None, "next_entry": None, "closed_trades": []},
+            "IWM_C": {"position": None, "next_entry": None, "closed_trades": []},
+            "IWM_D": {"position": None, "next_entry": None, "closed_trades": []},
         },
         "initial_capital": None,
         "cumulative_pnl":  0.0,
@@ -743,6 +744,79 @@ def submit_spread(trade_client, spread_type: str, legs_info: list,
     return None, None
 
 
+def check_for_assignment(trade_client, state: dict) -> None:
+    """
+    Scan open Alpaca positions for stock that resulted from option assignment.
+    If any IWM or XBI stock position is found (not an option), it means a short
+    option leg was assigned, converting it to shares.  The bot has no logic to
+    handle stock — flag it loudly so the user can act immediately.
+
+    Called once per daily run BEFORE managing slots, so any overnight assignment
+    is caught at the start of the session.
+    """
+    WATCHED = {"IWM"}    # IWM-only portfolio
+    try:
+        positions = trade_client.get_all_positions()
+    except Exception as e:
+        log.error(f"  Assignment check: could not read positions: {e}")
+        return
+
+    for pos in positions:
+        sym = str(pos.symbol)
+        # Stock positions have short symbols (IWM, XBI)
+        # Option positions have long OCC symbols (IWM260420P00249000)
+        is_stock   = sym in WATCHED
+        is_option  = len(sym) > 6 and sym[:3] in WATCHED
+
+        if is_stock:
+            qty   = float(pos.qty)
+            price = float(pos.current_price)
+            value = abs(qty * price)
+            side  = "LONG" if qty > 0 else "SHORT"
+            msg = (f"⚠ ASSIGNMENT DETECTED: {sym} stock position open — "
+                   f"{side} {abs(qty):.0f} shares @ ${price:.2f} "
+                   f"(value ${value:,.0f}). "
+                   f"A short option leg was likely assigned overnight. "
+                   f"Check Alpaca immediately and exercise/sell the "
+                   f"opposing long option leg to close the hedge.")
+            log.critical(msg)
+            # Also write to a dedicated alert file so it's visible in the repo
+            try:
+                alert_path = Path("assignment_alert.txt")
+                with open(alert_path, "a") as f:
+                    from datetime import datetime as dt
+                    f.write(f"[{dt.now().isoformat()}] {msg}\n")
+            except Exception:
+                pass
+            # Send mobile alert
+            send_alert(f"ASSIGNMENT: {sym} {side} {abs(qty):.0f}sh @ ${price:.2f}",
+                       title="⚠ Option Assignment Detected")
+
+
+def send_alert(message: str, title: str = "VRP Trader Alert") -> None:
+    """
+    Send a push notification via ntfy.sh — free, no signup needed.
+    Set NTFY_TOPIC env var (e.g. "vrp-trader-abc123") to receive alerts.
+    Install the ntfy app on your phone and subscribe to the same topic.
+    Falls back silently if the env var is not set.
+    """
+    import os, urllib.request
+    topic = os.environ.get("NTFY_TOPIC", "")
+    if not topic:
+        return
+    try:
+        req = urllib.request.Request(
+            f"https://ntfy.sh/{topic}",
+            data=message.encode("utf-8"),
+            headers={"Title": title, "Priority": "high", "Tags": "warning"},
+            method="POST",
+        )
+        urllib.request.urlopen(req, timeout=8)
+        log.info(f"  Alert sent to ntfy.sh/{topic}: {title}")
+    except Exception as e:
+        log.warning(f"  Alert send failed (ntfy.sh): {e}")
+
+
 def close_position_by_legs(trade_client, position_state: dict) -> bool:
     """
     Close an existing spread position leg by leg.
@@ -872,7 +946,7 @@ def compute_contracts(portfolio_value: float, max_loss_per_spread: float,
 
 def manage_spy_allocation(trade_client, data_client, state: dict,
                           portfolio_value: float):
-    """Stub — SPY allocation removed. All capital deployed in IWM+XBI options."""
+    """Stub — SPY allocation removed. All capital deployed in 4×IWM options."""
     return  # no-op
     """
     Ensure ~60% of portfolio is in SPY.
@@ -1502,6 +1576,12 @@ def _record_close(slot_state: dict, today: date, reason: str, pnl: float,
         log.info(f"  Closed: {reason}  P&L=${pnl:,.2f}  |  "
                  f"cumulative=${state['cumulative_pnl']:,.2f}  "
                  f"trades={state['trade_count']}")
+        send_alert(
+            f"{slot_id}: closed {reason}  P&L=${pnl:,.2f}  "
+            f"cumulative=${state['cumulative_pnl']:,.2f}  "
+            f"trades={state['trade_count']}",
+            title=f"VRP: {slot_id} closed ({'profit' if pnl>=0 else 'LOSS'})"
+        )
     else:
         log.info(f"  Closed: {reason}  P&L=${pnl:,.2f}")
 
@@ -1796,6 +1876,13 @@ def enter_slot(trade_client, opt_data_client, slot_id: str,
              f"{contracts} contracts  "
              f"credit=${actual_credit:.4f} (mid ${net_credit:.4f})  "
              f"max_loss=${actual_max_loss:.4f}")
+    send_alert(
+        f"{slot_id} {ticker}: opened {spread_name} "
+        f"{contracts}c @ ${actual_credit:.2f} credit  "
+        f"regime={regime['trend']}+{regime['vol']}+{regime['atr']}  "
+        f"exp {target_expiry}",
+        title=f"VRP: {slot_id} opened"
+    )
     return slot_state
 
 
@@ -1836,26 +1923,32 @@ def run():
         log.info(f"First run — initial capital set to ${portfolio_value:,.2f}")
 
     # ── Slot configuration ────────────────────────────────────
-    # 4 slots: IWM_A, IWM_B (17.5% each), XBI_A, XBI_B (22.5% each)
-    # Each ticker's B slot is staggered 7 days after its A slot.
+    # 4×IWM at 17.5% each = 70% deployed, 30% cash reserve
+    # Staggered 7 days apart → each slot has a different expiry and
+    # different strikes, providing time and price diversification.
     TICKER_SLOTS = [
         ("IWM_A", "IWM", CONFIG["iwm_slot_risk"]),
         ("IWM_B", "IWM", CONFIG["iwm_slot_risk"]),
-        ("XBI_A", "XBI", CONFIG["xbi_slot_risk"]),
-        ("XBI_B", "XBI", CONFIG["xbi_slot_risk"]),
+        ("IWM_C", "IWM", CONFIG["iwm_slot_risk"]),
+        ("IWM_D", "IWM", CONFIG["iwm_slot_risk"]),
     ]
-    # Gate B slots on first run
+    # On first run, gate B/C/D by 7/14/21 days so they open in sequence
+    FIRST_RUN_GATES = {"IWM_B": 7, "IWM_C": 14, "IWM_D": 21}
     for _sid, _tkr, _ in TICKER_SLOTS:
-        slot_st = state["slots"][_sid]
-        if _sid.endswith("_B") and slot_st.get("next_entry") is None and slot_st.get("position") is None:
-            gate = (today + timedelta(days=CONFIG["stagger_days"])).isoformat()
+        slot_st = state["slots"].setdefault(_sid, {"position": None, "next_entry": None, "closed_trades": []})
+        if _sid in FIRST_RUN_GATES and slot_st.get("next_entry") is None and slot_st.get("position") is None:
+            gate = (today + timedelta(days=FIRST_RUN_GATES[_sid])).isoformat()
             slot_st["next_entry"] = gate
-            log.info(f"Slot {_sid} ({_tkr}) first entry gated to {gate}")
+            log.info(f"Slot {_sid} ({_tkr}) first-run gate → {gate}")
+
+    # ── Assignment check (before anything else) ─────────────
+    log.info("Checking for overnight assignments...")
+    check_for_assignment(trade_client, state)
 
     # ── Regime detection (one per ticker) ────────────────────
     log.info("Computing regimes...")
     regimes = {}
-    for ticker in ["IWM", "XBI"]:
+    for ticker in ["IWM"]:    # IWM-only portfolio
         r = get_regime(CONFIG, ticker)
         regimes[ticker] = r
         log.info(f"  {ticker}: Trend={r['trend']}  Vol={r['vol']}  ATR={r['atr']}  → {r['spread']}")
@@ -1874,35 +1967,39 @@ def run():
             log.info(f"  Slot {slot_id}: no open position")
 
     # ── Open new positions ────────────────────────────────────
-    # Companion-slot stagger: after a slot enters, its same-ticker partner
-    # must be gated at least stagger_days later to prevent both slots from
-    # opening at the same underlying price on the same day (correlated risk).
-    #
-    # Pairs: IWM_A ↔ IWM_B,  XBI_A ↔ XBI_B
-    COMPANION = {"IWM_A":"IWM_B","IWM_B":"IWM_A","XBI_A":"XBI_B","XBI_B":"XBI_A"}
-    STAGGER   = timedelta(days=CONFIG["stagger_days"])
+    # Rolling stagger: with 4 IWM slots, the old A↔B pair logic is replaced
+    # by a check across ALL same-ticker slots. Before entering, we find the
+    # most recent entry date among all other open IWM positions. If any
+    # entered within stagger_days, this slot waits until that date + stagger.
+    # This guarantees a 7-day minimum gap between any two IWM entries,
+    # creating the rolling offset that diversifies strikes and expiry dates.
+    STAGGER = timedelta(days=CONFIG["stagger_days"])
 
     log.info("Checking entry opportunities...")
     for slot_id, ticker, slot_risk in TICKER_SLOTS:
         slot_st = state["slots"][slot_id]
         if slot_st.get("position") is None:
 
-            # ── Companion stagger check ───────────────────────
-            # If the companion slot has an open position that entered within
-            # stagger_days, delay this slot to companion_entry + stagger_days.
-            companion_id  = COMPANION[slot_id]
-            companion_pos = state["slots"][companion_id].get("position")
-            if companion_pos:
-                comp_entry = date.fromisoformat(companion_pos["entry_date"])
-                earliest   = comp_entry + STAGGER
+            # ── Rolling stagger check (all same-ticker slots) ─────────
+            # Find the most recently entered open position on the same ticker
+            other_entries = []
+            for other_id, other_tkr, _ in TICKER_SLOTS:
+                if other_id == slot_id or other_tkr != ticker:
+                    continue
+                other_pos = state["slots"][other_id].get("position")
+                if other_pos and other_pos.get("entry_date"):
+                    other_entries.append(date.fromisoformat(other_pos["entry_date"]))
+
+            if other_entries:
+                most_recent = max(other_entries)
+                earliest    = most_recent + STAGGER
                 if today < earliest:
                     gated_until = earliest.isoformat()
-                    # Only update if this would push next_entry later
                     cur_ne = slot_st.get("next_entry")
                     if not cur_ne or gated_until > cur_ne:
                         slot_st["next_entry"] = gated_until
-                        log.info(f"  Slot {slot_id}: companion {companion_id} "
-                                 f"entered {comp_entry} — stagger gate until "
+                        log.info(f"  Slot {slot_id}: most recent {ticker} entry "
+                                 f"was {most_recent} — stagger gate until "
                                  f"{gated_until} ({CONFIG['stagger_days']}d)")
                     state["slots"][slot_id] = slot_st
                     continue
@@ -1916,6 +2013,13 @@ def run():
                                  ticker=ticker,
                                  cfg_override=cfg_override)
             state["slots"][slot_id] = updated
+
+    # ── Assignment detection ─────────────────────────────────
+    log.info("Checking for assignment events...")
+    assignment_alerts = check_assignment(trade_client, state, today)
+    for alert in assignment_alerts:
+        send_alert("⚠ Assignment detected", alert,
+                   priority="urgent", tags="rotating_light,warning")
 
     # ── Save state ────────────────────────────────────────────
     save_state(state)
@@ -1947,6 +2051,137 @@ def run():
 
     log.info("Done.")
 
+    # ── Daily summary push notification ──────────────────────
+    open_slots = sum(1 for s in state["slots"].values() if s.get("position"))
+    closed_today = []
+    for sl_id, sl in state["slots"].items():
+        for ct in sl.get("closed_trades", []):
+            if ct.get("close_date") == today.isoformat():
+                closed_today.append(f"{sl_id} ${ct['realized_pnl']:+,.0f}")
+    cum_pnl = state.get("cumulative_pnl", 0)
+
+    summary_lines = [
+        f"Open positions: {open_slots}/4",
+        f"Portfolio: ${portfolio_value:,.0f}  cumulative P&L: ${cum_pnl:+,.0f}",
+    ]
+    if closed_today:
+        summary_lines.insert(0, "Closed today: " + "  |  ".join(closed_today))
+    if assignment_alerts:
+        summary_lines.insert(0, "ASSIGNMENTS NEED ATTENTION")
+
+    priority = "urgent" if assignment_alerts else ("high" if closed_today else "default")
+    tags     = "rotating_light" if assignment_alerts else (
+               "chart_with_upwards_trend" if closed_today else "robot")
+    send_alert(
+        title=f"VRP {'ALERT' if assignment_alerts else 'daily'} — {today}",
+        message="\n".join(summary_lines),
+        priority=priority,
+        tags=tags,
+    )
+
+
+
+
+# ══════════════════════════════════════════════════════════════
+#  ASSIGNMENT DETECTION
+# ══════════════════════════════════════════════════════════════
+
+def check_assignment(trade_client, state: dict, today: date) -> list:
+    """
+    Scan Alpaca positions for evidence of option assignment.
+
+    Assignment turns a short option into a stock position.  When detected:
+      - The stock position itself is flagged (the bot cannot manage it)
+      - The affected slot is identified by matching the stock ticker
+        to open positions recorded in state.json
+      - A WARNING is written to the log and returned as a list of alert
+        strings so the caller can also send a push notification
+
+    The bot does NOT attempt to close stock positions automatically —
+    assignment requires human judgement (the protective long leg should
+    be exercised / stock sold, but timing matters).  The alert tells you
+    to intervene manually.
+
+    Returns: list of alert message strings (empty = no assignment detected)
+    """
+    alerts = []
+    try:
+        positions = trade_client.get_all_positions()
+    except Exception as e:
+        log.warning(f"  Assignment check: could not read positions: {e}")
+        return alerts
+
+    # Stock positions (symbol length ≤ 5, no digits) that match tracked tickers
+    TRACKED = {"IWM", "XBI", "QQQ", "SPY", "XLE"}
+    for pos in positions:
+        sym = str(pos.symbol).upper()
+        if sym in TRACKED:
+            qty       = float(pos.qty)
+            mkt_val   = float(pos.market_value)
+            unreal_pl = float(pos.unrealized_pl)
+            direction = "LONG" if qty > 0 else "SHORT"
+            msg = (f"ASSIGNMENT DETECTED: {sym} stock position found  "
+                   f"{direction} {abs(qty):.0f} shares  "
+                   f"market_value=${mkt_val:,.0f}  P&L=${unreal_pl:,.0f}  "
+                   f"— manual intervention required: exercise protective leg "
+                   f"or close stock position NOW")
+            log.warning(f"  {msg}")
+            alerts.append(msg)
+
+            # Mark the affected slot in state as needing attention
+            for slot_id, slot in state.get("slots", {}).items():
+                if slot_id.startswith(sym) and slot.get("position"):
+                    slot["position"]["assignment_alert"] = today.isoformat()
+                    log.warning(f"  Slot {slot_id} flagged for manual review")
+
+    if not alerts:
+        log.info("  Assignment check: no stock positions found — all clear")
+    return alerts
+
+
+
+# ══════════════════════════════════════════════════════════════
+#  PUSH NOTIFICATIONS (ntfy.sh)
+# ══════════════════════════════════════════════════════════════
+
+def send_alert(title: str, message: str, priority: str = "default",
+               tags: str = "robot"):
+    """
+    Send a push notification via ntfy.sh.
+
+    Free, no signup, no API key — just pick a unique topic name.
+    Install the ntfy app (iOS/Android) and subscribe to your topic.
+
+    Set NTFY_TOPIC environment variable to your chosen topic name.
+    Example:  NTFY_TOPIC=vrp-trader-benny-alerts
+
+    Priority levels: min, low, default, high, urgent
+    Tags map to emoji in the app: robot, warning, white_check_mark,
+                                   rotating_light, chart_with_upwards_trend
+    """
+    import urllib.request, os
+    topic = os.environ.get("NTFY_TOPIC", "")
+    if not topic:
+        log.debug("  NTFY_TOPIC not set — skipping push notification")
+        return
+    try:
+        req = urllib.request.Request(
+            f"https://ntfy.sh/{topic}",
+            data=message.encode("utf-8"),
+            headers={
+                "Title":    title,
+                "Priority": priority,
+                "Tags":     tags,
+            },
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            if resp.status == 200:
+                log.info(f"  Alert sent: [{title}]")
+            else:
+                log.warning(f"  Alert send failed: HTTP {resp.status}")
+    except Exception as e:
+        log.warning(f"  Alert send failed: {e}")
 
 if __name__ == "__main__":
     run()
