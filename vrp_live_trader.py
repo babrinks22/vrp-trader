@@ -808,32 +808,9 @@ def check_for_assignment(trade_client, state: dict) -> None:
             except Exception:
                 pass
             # Send mobile alert
-            send_alert(f"ASSIGNMENT: {sym} {side} {abs(qty):.0f}sh @ ${price:.2f}",
-                       title="⚠ Option Assignment Detected")
-
-
-def send_alert(message: str, title: str = "VRP Trader Alert") -> None:
-    """
-    Send a push notification via ntfy.sh — free, no signup needed.
-    Set NTFY_TOPIC env var (e.g. "vrp-trader-abc123") to receive alerts.
-    Install the ntfy app on your phone and subscribe to the same topic.
-    Falls back silently if the env var is not set.
-    """
-    import os, urllib.request
-    topic = os.environ.get("NTFY_TOPIC", "")
-    if not topic:
-        return
-    try:
-        req = urllib.request.Request(
-            f"https://ntfy.sh/{topic}",
-            data=message.encode("utf-8"),
-            headers={"Title": title, "Priority": "high", "Tags": "warning"},
-            method="POST",
-        )
-        urllib.request.urlopen(req, timeout=8)
-        log.info(f"  Alert sent to ntfy.sh/{topic}: {title}")
-    except Exception as e:
-        log.warning(f"  Alert send failed (ntfy.sh): {e}")
+            send_alert(title="⚠ Option Assignment Detected",
+                       message=f"ASSIGNMENT: {sym} {side} {abs(qty):.0f}sh @ ${price:.2f}",
+                       priority="urgent", tags="rotating_light,warning")
 
 
 def close_position_by_legs(trade_client, position_state: dict) -> bool:
@@ -1595,10 +1572,12 @@ def _record_close(slot_state: dict, today: date, reason: str, pnl: float,
                  f"cumulative=${state['cumulative_pnl']:,.2f}  "
                  f"trades={state['trade_count']}")
         send_alert(
-            f"{slot_id}: closed {reason}  P&L=${pnl:,.2f}  "
-            f"cumulative=${state['cumulative_pnl']:,.2f}  "
-            f"trades={state['trade_count']}",
-            title=f"VRP: {slot_id} closed ({'profit' if pnl>=0 else 'LOSS'})"
+            title=f"VRP: {slot_id} closed ({'profit' if pnl >= 0 else 'LOSS'})",
+            message=(f"{slot_id}: closed {reason}  P&L=${pnl:,.2f}  "
+                     f"cumulative=${state['cumulative_pnl']:,.2f}  "
+                     f"trades={state['trade_count']}"),
+            priority="high" if pnl >= 0 else "urgent",
+            tags="chart_with_upwards_trend" if pnl >= 0 else "warning",
         )
     else:
         log.info(f"  Closed: {reason}  P&L=${pnl:,.2f}")
@@ -1895,11 +1874,12 @@ def enter_slot(trade_client, opt_data_client, slot_id: str,
              f"credit=${actual_credit:.4f} (mid ${net_credit:.4f})  "
              f"max_loss=${actual_max_loss:.4f}")
     send_alert(
-        f"{slot_id} {ticker}: opened {spread_name} "
-        f"{contracts}c @ ${actual_credit:.2f} credit  "
-        f"regime={regime['trend']}+{regime['vol']}+{regime['atr']}  "
-        f"exp {target_expiry}",
-        title=f"VRP: {slot_id} opened"
+        title=f"VRP: {slot_id} opened",
+        message=(f"{slot_id} {ticker}: opened {spread_name} "
+                 f"{contracts}c @ ${actual_credit:.2f} credit  "
+                 f"regime={regime['trend']}+{regime['vol']}+{regime['atr']}  "
+                 f"exp {target_expiry}"),
+        tags="chart_with_upwards_trend",
     )
     return slot_state
 
