@@ -11,3 +11,4 @@ date,action,slot,spread,trend,vol,atr,contracts,credit,max_loss,underlying_px,or
 2026-04-28,open,IWM_A,iron_condor,bullish,low,contracting,20,2.03,2.15,5.6,8.97,273.65,923d62f1-d5bb-4844-9a82-83e27ba584b4
 2026-04-28,open,XBI_A,iron_condor,neutral,low,contracting,28,0.45,1.655,72.8,9.55,131.67,998c7e11-e2c5-4a41-b180-481da432780e
 2026-05-05,open,IWM_B,iron_condor,bullish,low,expanding,20,1.89,1.975,4.3,9.11,282.65,c1bffc9b-1e5b-4ba5-8f76-bc1b80cc41c1
+2026-05-12,open,IWM_A,iron_condor,bullish,low,expanding,14,3.39,3.535,13.61,278.86,4.1,,,,,b23df301-7221-48cd-84c3-e50bcef82563
