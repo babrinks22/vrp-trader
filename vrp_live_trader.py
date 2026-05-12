@@ -241,10 +241,29 @@ def save_state(state: dict):
         json.dump(state, f, indent=2, default=str)
 
 
+# Canonical columns — every row writes all of these, blank for non-applicable fields.
+# open rows:  credit, credit_mid, max_loss, underlying_px, slippage_pct, order_id
+# close rows: credit, max_loss, close_reason, realized_pnl, entry_date, days_held, order_id
+TRADE_LOG_COLS = [
+    "date", "action", "slot", "spread", "trend", "vol", "atr",
+    "contracts", "credit", "credit_mid", "max_loss",
+    "underlying_px", "slippage_pct",
+    "close_reason", "realized_pnl", "entry_date", "days_held",
+    "order_id",
+]
+
+
 def log_trade(record: dict):
+    """Append one row to trade_log.csv using the fixed canonical schema."""
+    import csv as _csv
     path = Path(CONFIG["log_file"])
-    df   = pd.DataFrame([record])
-    df.to_csv(path, mode="a", header=not path.exists(), index=False)
+    row  = {col: record.get(col, "") for col in TRADE_LOG_COLS}
+    write_header = not path.exists()
+    with open(path, "a", newline="") as fh:
+        writer = _csv.DictWriter(fh, fieldnames=TRADE_LOG_COLS)
+        if write_header:
+            writer.writeheader()
+        writer.writerow(row)
 
 
 def save_spread_diagram(slot_id: str, spread_name: str, legs_info: list,
@@ -1551,22 +1570,21 @@ def _record_close(slot_state: dict, today: date, reason: str, pnl: float,
     except Exception:
         days_h  = ""
     log_trade({
-        "date":           today.isoformat(),
-        "action":         "close",
-        "slot":           slot_id,
-        "spread":         pos.get("spread", ""),
-        "trend":          pos.get("trend_regime", ""),
-        "vol":            pos.get("vol_regime", ""),
-        "atr":            pos.get("atr_regime", ""),
-        "contracts":      pos.get("contracts", 0),
-        "credit":         pos.get("credit_received", 0),
-        "max_loss":       pos.get("max_loss", 0),
-        "underlying_px":  "",
-        "close_reason":   reason,
-        "realized_pnl":   round(pnl, 2),
-        "entry_date":     pos.get("entry_date", ""),
-        "days_held":      days_h,
-        "order_id":       pos.get("order_id", ""),
+        "date":         today.isoformat(),
+        "action":       "close",
+        "slot":         slot_id,
+        "spread":       pos.get("spread", ""),
+        "trend":        pos.get("trend_regime", ""),
+        "vol":          pos.get("vol_regime", ""),
+        "atr":          pos.get("atr_regime", ""),
+        "contracts":    pos.get("contracts", 0),
+        "credit":       pos.get("credit_received", 0),
+        "max_loss":     pos.get("max_loss", 0),
+        "close_reason": reason,
+        "realized_pnl": round(pnl, 2),
+        "entry_date":   pos.get("entry_date", ""),
+        "days_held":    days_h,
+        "order_id":     pos.get("order_id", ""),
     })
 
     # Update global state counters
