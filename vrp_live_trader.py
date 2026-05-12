@@ -20,15 +20,20 @@
 #
 #  How it works:
 #    Each run takes ~60 seconds. It:
-#      1. Reads state.json (tracks both slots)
+#      1. Reads state.json (tracks all 4 slots)
 #      2. Manages open positions (profit target / DTE exit)
-#      3. Opens new positions if a slot is empty
-#      4. Manages SPY allocation (buy if under-allocated)
+#      3. Opens new positions if a slot is empty (subject to 7d stagger)
+#      4. Detects option assignments and alerts
 #      5. Writes updated state.json and appends to trade_log.csv
 #
+#  CLI flags:
+#    python vrp_live_trader.py            normal daily run
+#    python vrp_live_trader.py --dump-state   pretty-print state.json and exit
+#
 #  State file (state.json):
-#    Persists between runs. Tracks slot A and B positions,
-#    SPY shares held, and cumulative P&L. Delete it to reset.
+#    Persists between runs. Tracks all 4 IWM slots (A/B/C/D),
+#    cumulative P&L, per-slot stats, and trade count.
+#    Delete it to reset.
 #
 #  IMPORTANT — read before going live:
 #    - Paper trade for at least 3 months first
@@ -38,9 +43,14 @@
 #    - Always review the log before market close on entry days
 # ============================================================
 
-import os, sys, json, math, logging
-from datetime import datetime, date, timedelta
+import os, sys, json, math, time, logging, argparse, urllib.request
+from datetime import datetime, date, timedelta, timezone
 from pathlib import Path
+
+try:
+    import zoneinfo
+except ImportError:
+    zoneinfo = None
 
 import numpy as np
 import pandas as pd
@@ -104,7 +114,6 @@ CONFIG = {
     "vrp_factor":      1.18,   # IV = HV × factor (IWM VRP adjustment)
 
     # ── Spread parameters ─────────────────────────────────────
-    "spread_pct":      0.025,  # strike width as % of underlying (legacy — wings now IV-scaled)
     "min_credit":      0.90,   # minimum net credit per share.
                                # Derived from abs slippage model: $0.30 fixed
                                # bid-ask cost + $0.60 backtest-optimal net credit
@@ -112,7 +121,8 @@ CONFIG = {
                                # only blocks ultra-calm (VIX<14) entries where
                                # slippage would exceed 33% of gross credit.
                                # prevents entering when IV is so low the reward is negligible
-    "r":               0.04,   # risk-free rate for B-S
+    "r":               0.04,   # risk-free rate fallback if live ^IRX fetch fails
+    "max_quote_spread_pct": 0.30,  # skip options where (ask-bid)/mid > this (#14)
 
     # ── Execution ─────────────────────────────────────────────
     # Credit limit orders: submit at mid, then widen by this if unfilled
@@ -126,76 +136,16 @@ CONFIG = {
 
 
 # ══════════════════════════════════════════════════════════════
-#  REGIME MAP (identical to backtest)
+#  REGIME / SPREAD CONFIG (iron-condor-only — see history note)
 # ══════════════════════════════════════════════════════════════
 
-# ── Regime map — optimised via 44-ticker cross-validation (2005-2024) ──────
-# Changes vs original (9 of 18 regimes):
-#   bullish+high+expanding:   skewed_put  → iron_condor  (same WR, +P&L)
-#   bearish+high+contracting: skewed_put  → bull_put     (+2.6pp WR, +$23K)
-#   bearish+high+expanding:   skewed_put  → bull_put     (+2.9pp WR, +$10K)
-#   bearish+mid+contracting:  skewed_put  → iron_condor  (same WR, +$132K)
-#   bearish+low+contracting:  skewed_put  → iron_condor  (same WR, +$124K)
-#   bearish+low+expanding:    skewed_put  → bull_put     (+7.0pp WR, +$13K)
-#   neutral+high+contracting: skewed_put  → bull_put     (+2.7pp WR, +$8K)
-#   neutral+high+expanding:   skewed_put  → bull_put     (+7.0pp WR, +$12K)
-#   neutral+mid+contracting:  long_dte    → iron_condor  (same WR, +$7K)
-# Key finding: skewed_put systematically underperforms iron_condor on P&L
-# in most regimes. bull_put is reserved for bearish/high-vol where directional
-# put premium genuinely dominates. Does NOT affect any open positions —
-# only applies at the moment of entering a new trade.
-REGIME_MAP = {
-    # Bullish regimes — long_dte_condor optimal in low/mid vol
-    ("bullish","low","contracting"): "long_dte_condor",
-    ("bullish","low","expanding"):   "long_dte_condor",
-    ("bullish","low","unknown"):     "long_dte_condor",
-    ("bullish","mid","contracting"): "long_dte_condor",
-    ("bullish","mid","expanding"):   "long_dte_condor",
-    ("bullish","mid","unknown"):     "long_dte_condor",
-    ("bullish","high","contracting"):"skewed_put",      # low frequency, keep conservative
-    ("bullish","high","expanding"):  "iron_condor",     # CHANGED: same WR, better P&L
-    ("bullish","high","unknown"):    "skewed_put",
+# Out-of-sample validation across 23 tickers showed iron_condor outperforms
+# regime-selected spreads on $/trade. The full REGIME_MAP has been archived;
+# this file uses iron_condor in every regime that isn't in the skip-2 gate.
+# History reference: see git tag pre-iron-condor-only for the legacy map.
 
-    # Bearish regimes — iron_condor or bull_put, skewed_put retired
-    ("bearish","high","contracting"):"bull_put",        # CHANGED: +2.6pp WR, +$23K P&L
-    ("bearish","high","expanding"):  "bull_put",        # CHANGED: +2.9pp WR, +$10K P&L
-    ("bearish","high","unknown"):    "bull_put",
-    ("bearish","mid","contracting"): "iron_condor",     # CHANGED: same WR, +$132K P&L
-    ("bearish","mid","expanding"):   "iron_condor",     # unchanged — already optimal
-    ("bearish","mid","unknown"):     "iron_condor",
-    ("bearish","low","contracting"): "iron_condor",     # CHANGED: same WR, +$124K P&L
-    ("bearish","low","expanding"):   "bull_put",        # CHANGED: +7.0pp WR, +$13K P&L
-    ("bearish","low","unknown"):     "iron_condor",
-
-    # Neutral regimes — iron_condor default, bull_put for high-vol
-    ("neutral","high","contracting"):"bull_put",        # CHANGED: +2.7pp WR, +$8K P&L
-    ("neutral","high","expanding"):  "bull_put",        # CHANGED: +7.0pp WR, +$12K P&L
-    ("neutral","high","unknown"):    "bull_put",
-    ("neutral","mid","contracting"): "iron_condor",     # CHANGED: long_dte → iron_condor
-    ("neutral","mid","expanding"):   "iron_condor",     # unchanged — already optimal
-    ("neutral","mid","unknown"):     "iron_condor",
-    ("neutral","low","contracting"): "long_dte_condor", # unchanged — highest volume regime
-    ("neutral","low","expanding"):   "long_dte_condor", # unchanged — iron_condor ties it
-    ("neutral","low","unknown"):     "long_dte_condor",
-
-    # Unknown/fallback
-    ("unknown","high","contracting"):"iron_condor",
-    ("unknown","high","expanding"):  "iron_condor",
-    ("unknown","high","unknown"):    "iron_condor",
-    ("unknown","mid","contracting"): "iron_condor",
-    ("unknown","mid","expanding"):   "iron_condor",
-    ("unknown","mid","unknown"):     "iron_condor",
-    ("unknown","low","contracting"): "iron_condor",
-    ("unknown","low","expanding"):   "iron_condor",
-    ("unknown","low","unknown"):     "iron_condor",
-}
-
-# Spread definitions — DTE will be set to CONFIG["slot_dte"] at runtime
 SPREAD_PARAMS = {
-    "long_dte_condor": {"put_delta":0.20,"call_delta":0.20,"spread_pct":0.035,"put_width_mult":1.0},
-    "skewed_put":      {"put_delta":0.20,"call_delta":0.20,"spread_pct":0.030,"put_width_mult":1.5},
-    "iron_condor":     {"put_delta":0.20,"call_delta":0.20,"spread_pct":0.030,"put_width_mult":1.0},
-    "bull_put":        {"put_delta":0.25,"call_delta":0.00,"spread_pct":0.030,"put_width_mult":1.0},
+    "iron_condor": {"put_delta": 0.20, "call_delta": 0.20, "put_width_mult": 1.0},
 }
 
 
@@ -438,6 +388,48 @@ def save_spread_diagram(slot_id: str, spread_name: str, legs_info: list,
 
 
 # ══════════════════════════════════════════════════════════════
+#  RISK-FREE RATE (cached from ^IRX, refreshed daily)
+# ══════════════════════════════════════════════════════════════
+
+_RATE_CACHE_FILE = Path(".rfr_cache.json")
+
+
+def get_risk_free_rate() -> float:
+    """
+    Return the current 3-month T-bill yield as a decimal (e.g. 0.045).
+    Cached to disk for 24 hours to avoid hammering yfinance on every brentq call.
+    Falls back to CONFIG["r"] if the fetch fails.
+    """
+    today_iso = date.today().isoformat()
+    try:
+        if _RATE_CACHE_FILE.exists():
+            cached = json.loads(_RATE_CACHE_FILE.read_text())
+            if cached.get("date") == today_iso:
+                return float(cached["rate"])
+    except Exception:
+        pass
+
+    rate = CONFIG["r"]
+    try:
+        # ^IRX is the 13-week T-bill index, quoted in percent (e.g. 4.5 = 4.5%)
+        bars = yf.download("^IRX", period="5d",
+                           auto_adjust=True, progress=False)["Close"].squeeze()
+        latest = float(bars.dropna().iloc[-1])
+        if 0 < latest < 25:
+            rate = latest / 100.0
+        else:
+            log.warning(f"  ^IRX returned implausible value {latest}; using fallback {rate}")
+    except Exception as e:
+        log.warning(f"  ^IRX fetch failed: {e}; using fallback {rate}")
+
+    try:
+        _RATE_CACHE_FILE.write_text(json.dumps({"date": today_iso, "rate": rate}))
+    except Exception:
+        pass
+    return rate
+
+
+# ══════════════════════════════════════════════════════════════
 #  BLACK-SCHOLES HELPERS (for strike selection)
 # ══════════════════════════════════════════════════════════════
 
@@ -451,36 +443,160 @@ def bs_delta(S, K, T, r, sigma, option_type="put"):
 
 
 def find_strike_by_delta(S, r, sigma, T, target_delta, option_type="put"):
+    """
+    Solve for the strike at which |delta| == target_delta.
+
+    Bracket widened to [S*0.10, S*2.50] (was [S*0.40, S*1.60]) to handle
+    high-IV regimes where 0.20-delta puts can sit far below S. The old bracket
+    failed silently into the linear-approximation fallback, returning a strike
+    ~30% closer to ATM than intended on a vol spike.
+    """
     if T <= 0 or sigma <= 0:
-        return S * (1 - target_delta) if option_type=="put" else S * (1 + target_delta)
+        return S * (1 - target_delta) if option_type == "put" else S * (1 + target_delta)
     try:
         return brentq(
             lambda K: abs(bs_delta(S, K, T, r, sigma, option_type)) - target_delta,
-            S*0.40, S*1.60, xtol=0.01
+            S * 0.10, S * 2.50, xtol=0.01,
         )
     except ValueError:
-        return S*(1-target_delta*1.5) if option_type=="put" else S*(1+target_delta*1.5)
+        log.warning(f"  find_strike_by_delta brentq failed for S={S:.2f} "
+                    f"sigma={sigma:.3f} T={T:.4f} target_delta={target_delta:.2f} "
+                    f"type={option_type} — using linear fallback")
+        return S * (1 - target_delta * 1.5) if option_type == "put" else S * (1 + target_delta * 1.5)
+
+
+def bs_price(S, K, T, r, sigma, option_type="put"):
+    """Black-Scholes price for a European put or call."""
+    if T <= 0:
+        return max(K - S, 0) if option_type == "put" else max(S - K, 0)
+    if sigma <= 0:
+        return 0.0
+    try:
+        d1 = (math.log(S / K) + (r + 0.5 * sigma ** 2) * T) / (sigma * math.sqrt(T))
+        d2 = d1 - sigma * math.sqrt(T)
+        if option_type == "call":
+            return S * norm.cdf(d1) - K * math.exp(-r * T) * norm.cdf(d2)
+        return K * math.exp(-r * T) * norm.cdf(-d2) - S * norm.cdf(-d1)
+    except Exception:
+        return 0.0
+
+
+def _implied_vol_from_price(S, K, T, r, price, opt_type="put"):
+    """
+    Solve for the implied volatility that prices the option at `price`.
+    Returns the IV (e.g. 0.18) or None on failure.
+
+    Used by enter_slot's IV-refinement step (#15) so strike selection uses the
+    actual market-implied vol rather than HV × VRP factor.
+    """
+    if T <= 0 or price <= 0 or S <= 0 or K <= 0:
+        return None
+    try:
+        return brentq(
+            lambda v: bs_price(S, K, T, r, v, opt_type) - price,
+            1e-4, 5.0, xtol=1e-4,
+        )
+    except (ValueError, RuntimeError):
+        return None
 
 
 # ══════════════════════════════════════════════════════════════
 #  REGIME DETECTION
 # ══════════════════════════════════════════════════════════════
 
+_PRICE_CACHE_DIR = Path(".price_cache")
+
+
+def _fetch_history(symbol: str, lookback_days: int,
+                   max_retries: int = 3) -> pd.Series:
+    """
+    Download daily close history for `symbol` with disk caching and retry.
+
+    Cache strategy:
+      - Stored at .price_cache/{symbol}.csv as date,close rows
+      - On each call we read the cache, find the last cached date, and
+        fetch only the missing tail (or full lookback if no cache)
+      - This trims ~250 daily rows × 22 KB/yr down to ~1 KB/day of network
+
+    Retry strategy:
+      - yfinance occasionally returns empty (rate limit / outage)
+      - 3 attempts with exponential backoff (1s, 2s, 4s)
+      - On total failure, returns whatever cache we have; if no cache, raises
+    """
+    _PRICE_CACHE_DIR.mkdir(exist_ok=True)
+    cache_path = _PRICE_CACHE_DIR / f"{symbol.replace('^', '_').replace('/', '_')}.csv"
+
+    cached_series = None
+    if cache_path.exists():
+        try:
+            cached = pd.read_csv(cache_path, index_col=0, parse_dates=True)
+            cached_series = cached["close"].dropna()
+            cached_series.index = pd.to_datetime(cached_series.index)
+        except Exception as e:
+            log.warning(f"  cache read failed for {symbol}: {e}")
+            cached_series = None
+
+    # Decide fetch window
+    today = pd.Timestamp.today().normalize()
+    if cached_series is not None and len(cached_series) > 0:
+        last_cached = pd.Timestamp(cached_series.index.max()).normalize()
+        # if we have data through yesterday, only fetch the last few days
+        fetch_start = max(last_cached - pd.Timedelta(days=2),
+                          today - pd.Timedelta(days=lookback_days * 1.5))
+    else:
+        fetch_start = today - pd.Timedelta(days=lookback_days * 1.5)
+
+    new_series = None
+    for attempt in range(max_retries):
+        try:
+            raw = yf.download(symbol, start=fetch_start.strftime("%Y-%m-%d"),
+                              end=(today + pd.Timedelta(days=1)).strftime("%Y-%m-%d"),
+                              auto_adjust=True, progress=False)
+            if raw is None or raw.empty:
+                raise RuntimeError("empty result")
+            new_series = raw["Close"].squeeze().dropna()
+            new_series.index = pd.to_datetime(new_series.index)
+            break
+        except Exception as e:
+            wait = 2 ** attempt
+            log.warning(f"  yfinance {symbol} attempt {attempt+1}/{max_retries} "
+                        f"failed: {e} — sleeping {wait}s")
+            time.sleep(wait)
+
+    # Merge cache + fresh
+    if new_series is not None and len(new_series) > 0:
+        if cached_series is not None:
+            combined = pd.concat([cached_series, new_series])
+            combined = combined[~combined.index.duplicated(keep="last")].sort_index()
+        else:
+            combined = new_series
+        # Write back
+        try:
+            out = combined.to_frame("close")
+            out.index.name = "date"
+            out.to_csv(cache_path)
+        except Exception as e:
+            log.warning(f"  cache write failed for {symbol}: {e}")
+        return combined
+
+    # Fetch failed; fall back to cache if we have it
+    if cached_series is not None and len(cached_series) > 0:
+        log.warning(f"  using stale cache for {symbol} "
+                    f"(last bar {cached_series.index.max().date()})")
+        return cached_series
+
+    raise RuntimeError(f"Could not fetch {symbol} and no cache available")
+
+
 def get_regime(cfg: dict, ticker: str = "IWM") -> dict:
     """
-    Compute regime signals for the given ticker (IWM or XBI).
-    XBI uses the same equity regime map — biotech follows risk-on/off
-    cycles driven by the same VIX and SMA signals as small-caps.
-    Returns: {"trend", "vol", "atr", "hv", "iv", "vix", "price", "spread"}
+    Compute regime signals for the given ticker.
+    Returns: {"trend", "vol", "atr", "hv", "iv", "vix", "price", "spread", "skip_entry"}
     """
     lookback_days = cfg["ivr_lookback"] + 60
-    end   = datetime.today()
-    start = end - timedelta(days=lookback_days * 1.5)
 
-    underlying = yf.download(ticker, start=start, end=end,
-                             auto_adjust=True, progress=False)["Close"].squeeze()
-    vix = yf.download("^VIX", start=start, end=end,
-                      auto_adjust=True, progress=False)["Close"].squeeze()
+    underlying = _fetch_history(ticker, lookback_days)
+    vix        = _fetch_history("^VIX", lookback_days)
 
     # Align
     df = pd.DataFrame({"px": underlying, "vix": vix}).ffill().dropna()
@@ -568,9 +684,16 @@ def find_contract(trade_client, opt_data_client,
                   target_delta: float, target_strike: float,
                   target_expiry: date) -> dict:
     """
-    Find the nearest IWM option contract to target_strike
-    expiring closest to target_expiry.
-    Returns dict with {symbol, strike, expiry, bid, ask, mid}
+    Find the option contract closest to target_strike expiring closest to
+    target_expiry, subject to a bid-ask quality filter.
+
+    Quality filter: rejects contracts where (ask - bid) / mid exceeds
+    CONFIG["max_quote_spread_pct"]. On a thin chain the absolute-closest
+    strike may have a $0 bid and $5 ask — a "mid" of $2.50 is fictional and
+    will never fill at limit. Better to pick the next-closest strike with a
+    real two-sided market than to submit an order that never executes.
+
+    Returns dict with {symbol, strike, expiry, type, bid, ask, mid} or None.
     """
     exp_min = (target_expiry - timedelta(days=CONFIG["dte_tolerance"])).isoformat()
     exp_max = (target_expiry + timedelta(days=CONFIG["dte_tolerance"])).isoformat()
@@ -581,7 +704,7 @@ def find_contract(trade_client, opt_data_client,
                 underlying_symbols=[underlying],
                 expiration_date_gte=exp_min,
                 expiration_date_lte=exp_max,
-                type=ContractType.PUT if option_type=="put" else ContractType.CALL,
+                type=ContractType.PUT if option_type == "put" else ContractType.CALL,
                 status=AssetStatus.ACTIVE,
             )
         )
@@ -593,32 +716,60 @@ def find_contract(trade_client, opt_data_client,
         log.warning(f"No {option_type} contracts found for {underlying} near {target_expiry}")
         return None
 
-    # Pick contract closest to target strike
-    best = min(
+    # Sort by closeness to target strike — we'll walk this list until we
+    # find one with a healthy two-sided market.
+    candidates = sorted(
         contracts.option_contracts,
-        key=lambda c: abs(float(c.strike_price) - target_strike)
+        key=lambda c: abs(float(c.strike_price) - target_strike),
     )
 
-    # Get latest quote for mid price
-    try:
-        snap = opt_data_client.get_option_snapshot(
-            OptionSnapshotRequest(symbol_or_symbols=[best.symbol])
-        )
-        quote = snap[best.symbol].latest_quote
-        bid, ask = float(quote.bid_price), float(quote.ask_price)
-        mid = (bid + ask) / 2
-    except Exception:
-        bid = ask = mid = 0.0
+    max_spread_pct = CONFIG.get("max_quote_spread_pct", 0.30)
+    fallback = None    # remember the closest one in case nothing passes the filter
 
-    return {
-        "symbol":  best.symbol,
-        "strike":  float(best.strike_price),
-        "expiry":  best.expiration_date,
-        "type":    option_type,
-        "bid":     bid,
-        "ask":     ask,
-        "mid":     mid,
-    }
+    for c in candidates[:8]:    # check up to 8 nearby strikes before giving up
+        try:
+            snap = opt_data_client.get_option_snapshot(
+                OptionSnapshotRequest(symbol_or_symbols=[c.symbol])
+            )
+            quote = snap[c.symbol].latest_quote
+            bid, ask = float(quote.bid_price), float(quote.ask_price)
+        except Exception:
+            bid = ask = 0.0
+
+        mid = (bid + ask) / 2 if (bid > 0 and ask > 0) else 0.0
+        record = {
+            "symbol": c.symbol,
+            "strike": float(c.strike_price),
+            "expiry": c.expiration_date,
+            "type":   option_type,
+            "bid":    bid,
+            "ask":    ask,
+            "mid":    mid,
+        }
+
+        # Remember the closest contract even if it fails the filter — we'll
+        # use it as a last resort rather than returning None.
+        if fallback is None:
+            fallback = record
+
+        if mid <= 0:
+            continue   # no market at all, skip
+
+        spread_pct = (ask - bid) / mid
+        if spread_pct <= max_spread_pct:
+            if c.symbol != candidates[0].symbol:
+                log.info(f"  find_contract: skipped {candidates[0].symbol} "
+                         f"(wide spread) → picked {c.symbol} "
+                         f"(spread {spread_pct*100:.0f}% ≤ {max_spread_pct*100:.0f}%)")
+            return record
+
+    # Nothing passed the quality filter — return the closest strike with a warning
+    if fallback is not None:
+        log.warning(f"  find_contract: no contract near ${target_strike:.0f} "
+                    f"passed bid-ask filter (max {max_spread_pct*100:.0f}%) — "
+                    f"using fallback {fallback['symbol']} anyway "
+                    f"(bid={fallback['bid']:.2f} ask={fallback['ask']:.2f})")
+    return fallback
 
 
 # ══════════════════════════════════════════════════════════════
@@ -656,9 +807,11 @@ def submit_spread(trade_client, spread_type: str, legs_info: list,
         log.error("  Net credit is zero or negative, cannot submit")
         return None, None
 
-    MAX_RETRIES   = CONFIG.get("max_fill_retries", 3)
-    LIMIT_OFFSET  = CONFIG.get("limit_offset", 0.05)
-    POLL_WAIT     = 15   # seconds between fill checks
+    MAX_RETRIES        = CONFIG.get("max_fill_retries", 3)
+    # CREDIT_CONCESSION: we move the limit DOWN (accept less credit) to make
+    # the order fill. For credit orders, a smaller limit = easier fill.
+    CREDIT_CONCESSION  = CONFIG.get("limit_offset", 0.05)
+    POLL_WAIT          = 15   # seconds between fill checks
 
     for attempt in range(MAX_RETRIES):
         try:
@@ -679,7 +832,6 @@ def submit_spread(trade_client, spread_type: str, legs_info: list,
             return None, None
 
         # Poll for fill
-        import time
         filled_credit = None
         for poll in range(3):
             time.sleep(POLL_WAIT)
@@ -692,17 +844,22 @@ def submit_spread(trade_client, spread_type: str, legs_info: list,
                     fp = getattr(o, "filled_avg_price", None)
                     if fp is not None:
                         try:
-                            # Alpaca returns credit as negative for mleg sells
-                            filled_credit = abs(float(fp))
+                            fp_raw = float(fp)
+                            # Sign sanity: a credit mleg should produce
+                            # negative fp (Alpaca convention) OR positive
+                            # depending on SDK version. Log raw so we can audit.
+                            filled_credit = abs(fp_raw)
                             log.info(f"  Fill confirmed (mleg avg): "
-                                     f"${filled_credit:.4f}/share  "
-                                     f"(limit was ${limit_price:.2f}, "
+                                     f"raw={fp_raw:+.4f} → credit=${filled_credit:.4f}/share  "
+                                     f"(limit ${limit_price:.2f}, "
                                      f"slippage {(limit_price-filled_credit)/limit_price*100:.1f}%)")
                             break
                         except (TypeError, ValueError):
                             pass
 
                     # ── Method 2: sum individual leg fills ─────────────────
+                    # Try parent order's .legs attribute first; if that's
+                    # empty/missing, query child orders by parent_id.
                     leg_fills = {}
                     try:
                         legs_data = getattr(o, "legs", []) or []
@@ -714,6 +871,23 @@ def submit_spread(trade_client, spread_type: str, legs_info: list,
                                 leg_fills[sym] = ("sell" in side, float(fp_l))
                     except Exception:
                         pass
+
+                    # Fallback: query all orders linked by parent_id
+                    if not leg_fills:
+                        try:
+                            from alpaca.trading.requests import GetOrdersRequest as _GOR
+                            children = trade_client.get_orders(
+                                filter=_GOR(parent_id=order_id)
+                            ) if hasattr(trade_client, "get_orders") else []
+                            for ch in children:
+                                fp_l = getattr(ch, "filled_avg_price", None)
+                                if fp_l is None:
+                                    continue
+                                sym  = str(ch.symbol)
+                                side = str(ch.side).lower()
+                                leg_fills[sym] = ("sell" in side, float(fp_l))
+                        except Exception as _e:
+                            log.debug(f"  parent_id leg query failed: {_e}")
 
                     if leg_fills:
                         total = sum(
@@ -748,12 +922,12 @@ def submit_spread(trade_client, spread_type: str, legs_info: list,
         if filled_credit is not None and filled_credit > 0:
             return order_id, filled_credit
 
-        # Not filled — widen limit and retry
+        # Not filled — concede credit (lower the limit) and retry.
+        # For credit orders: limit ↓ → fills easier.
         if attempt < MAX_RETRIES - 1:
-            limit_price = round(limit_price - LIMIT_OFFSET, 2)
-            log.info(f"  Not filled — widening limit to ${limit_price:.2f} "
-                     f"(attempt {attempt+2}/{MAX_RETRIES})")
-            # Cancel the unfilled order before retrying
+            limit_price = round(limit_price - CREDIT_CONCESSION, 2)
+            log.info(f"  Not filled — conceding ${CREDIT_CONCESSION:.2f} of credit, "
+                     f"new limit ${limit_price:.2f} (attempt {attempt+2}/{MAX_RETRIES})")
             try:
                 trade_client.cancel_order_by_id(order_id)
             except Exception:
@@ -763,64 +937,92 @@ def submit_spread(trade_client, spread_type: str, legs_info: list,
     return None, None
 
 
-def check_for_assignment(trade_client, state: dict) -> None:
+def check_assignment(trade_client, state: dict, today: date) -> list:
     """
-    Scan open Alpaca positions for stock that resulted from option assignment.
-    If any IWM or XBI stock position is found (not an option), it means a short
-    option leg was assigned, converting it to shares.  The bot has no logic to
-    handle stock — flag it loudly so the user can act immediately.
+    Scan Alpaca positions for evidence of option assignment.
 
-    Called once per daily run BEFORE managing slots, so any overnight assignment
-    is caught at the start of the session.
+    Assignment turns a short option into a stock position. When detected:
+      - The stock position itself is flagged (the bot cannot manage it).
+      - The affected slot in state.json is flagged with assignment_alert.
+      - A WARNING is written to the log.
+      - A list of alert strings is returned so the caller can send a push.
+      - The alert is written to assignment_alert.txt only once per assignment
+        (tracked by symbol+qty hash in state["seen_assignments"]); subsequent
+        daily runs won't re-spam the file.
+
+    The bot does NOT attempt to close stock positions automatically —
+    assignment requires human judgement.
+
+    Returns: list of alert message strings (empty = no assignment detected).
     """
-    WATCHED = {"IWM"}    # IWM-only portfolio
+    alerts = []
     try:
         positions = trade_client.get_all_positions()
     except Exception as e:
-        log.error(f"  Assignment check: could not read positions: {e}")
-        return
+        log.warning(f"  Assignment check: could not read positions: {e}")
+        return alerts
+
+    seen = set(state.get("seen_assignments", []))
+
+    # Tracked tickers: anything our slots use. Currently IWM-only.
+    TRACKED = {sid.split("_")[0] for sid in state.get("slots", {}).keys()} or {"IWM"}
 
     for pos in positions:
-        sym = str(pos.symbol)
-        # Stock positions have short symbols (IWM, XBI)
-        # Option positions have long OCC symbols (IWM260420P00249000)
-        is_stock   = sym in WATCHED
-        is_option  = len(sym) > 6 and sym[:3] in WATCHED
+        sym = str(pos.symbol).upper()
+        if sym not in TRACKED:
+            continue
 
-        if is_stock:
-            qty   = float(pos.qty)
-            price = float(pos.current_price)
-            value = abs(qty * price)
-            side  = "LONG" if qty > 0 else "SHORT"
-            msg = (f"⚠ ASSIGNMENT DETECTED: {sym} stock position open — "
-                   f"{side} {abs(qty):.0f} shares @ ${price:.2f} "
-                   f"(value ${value:,.0f}). "
-                   f"A short option leg was likely assigned overnight. "
-                   f"Check Alpaca immediately and exercise/sell the "
-                   f"opposing long option leg to close the hedge.")
-            log.critical(msg)
-            # Also write to a dedicated alert file so it's visible in the repo
+        qty       = float(pos.qty)
+        mkt_val   = float(getattr(pos, "market_value", 0) or 0)
+        unreal_pl = float(getattr(pos, "unrealized_pl", 0) or 0)
+        price     = float(getattr(pos, "current_price", 0) or 0)
+        direction = "LONG" if qty > 0 else "SHORT"
+
+        msg = (f"ASSIGNMENT DETECTED: {sym} stock position found  "
+               f"{direction} {abs(qty):.0f} shares @ ${price:.2f}  "
+               f"market_value=${mkt_val:,.0f}  P&L=${unreal_pl:,.0f}  "
+               f"— manual intervention required: exercise protective leg "
+               f"or close stock position NOW")
+        log.warning(f"  {msg}")
+        alerts.append(msg)
+
+        # Dedupe key: ticker + signed-qty captures both the "what" and a
+        # natural identity. If the assignment changes (partial close, etc.)
+        # this key changes and we'll re-alert.
+        dedupe_key = f"{sym}:{direction}:{int(abs(qty))}:{today.isoformat()[:7]}"
+        if dedupe_key not in seen:
             try:
                 alert_path = Path("assignment_alert.txt")
                 with open(alert_path, "a") as f:
-                    from datetime import datetime as dt
-                    f.write(f"[{dt.now().isoformat()}] {msg}\n")
+                    f.write(f"[{datetime.now().isoformat()}] {msg}\n")
             except Exception:
                 pass
-            # Send mobile alert
-            send_alert(title="⚠ Option Assignment Detected",
-                       message=f"ASSIGNMENT: {sym} {side} {abs(qty):.0f}sh @ ${price:.2f}",
-                       priority="urgent", tags="rotating_light,warning")
+            seen.add(dedupe_key)
+
+        # Mark the affected slot(s) in state
+        for slot_id, slot in state.get("slots", {}).items():
+            if slot_id.startswith(sym) and slot.get("position"):
+                slot["position"]["assignment_alert"] = today.isoformat()
+
+    state["seen_assignments"] = sorted(seen)
+    if not alerts:
+        log.info("  Assignment check: no stock positions found — all clear")
+    return alerts
 
 
-def close_position_by_legs(trade_client, position_state: dict) -> bool:
+def close_position_by_legs(trade_client, position_state: dict) -> tuple:
     """
     Close an existing spread position leg by leg.
 
-    Best-effort: closes as many legs as possible and returns True even on
-    partial failures so that state.json is always updated and the slot is
-    freed.  This prevents the dangerous state of state.json thinking a
-    position is open while it has already been partially closed in Alpaca.
+    Returns (success, failed_legs) where:
+      - success: True iff every leg was confirmed closed (or expired/missing)
+      - failed_legs: list of leg symbols that could not be closed
+
+    Best-effort semantics: the slot is freed even when some legs failed,
+    but the caller can use failed_legs to:
+      - tag the trade_log row with close_reason="dte_exit_partial"
+      - send a warning alert so the human knows to check Alpaca
+      - flag the P&L as approximate
 
     Legs worth < MIN_CLOSE_VALUE are skipped — letting them expire worthless
     is cheaper than paying bid-ask to close a $0.01 option.
@@ -831,22 +1033,21 @@ def close_position_by_legs(trade_client, position_state: dict) -> bool:
     closed_count = 0
     failed_legs  = []
 
-    # First pass: read current position sizes from Alpaca
+    # Read current position sizes from Alpaca
     try:
         open_pos = {p.symbol: p for p in trade_client.get_all_positions()}
     except Exception:
         open_pos = {}
 
     for sym, is_short in zip(leg_symbols, leg_sides):
-        # If leg has no position in Alpaca, skip (already expired/assigned)
         if sym not in open_pos:
             log.info(f"  Leg {sym}: not in Alpaca positions — already closed/expired")
             closed_count += 1
             continue
 
-        # Check current market value — skip worthless legs
+        # Skip worthless legs
         try:
-            pos_val = abs(float(open_pos[sym].market_value))
+            pos_val   = abs(float(open_pos[sym].market_value))
             per_share = pos_val / (abs(float(open_pos[sym].qty)) * 100)
             if per_share < MIN_CLOSE_VALUE:
                 log.info(f"  Leg {sym}: value ${per_share:.3f}/share < "
@@ -854,9 +1055,8 @@ def close_position_by_legs(trade_client, position_state: dict) -> bool:
                 closed_count += 1
                 continue
         except Exception:
-            pass   # proceed with close attempt if we can't read value
+            pass
 
-        # Attempt close with retry
         for attempt in range(3):
             try:
                 trade_client.close_position(sym)
@@ -866,12 +1066,14 @@ def close_position_by_legs(trade_client, position_state: dict) -> bool:
             except Exception as e:
                 err = str(e)
                 if attempt < 2:
-                    import time; time.sleep(1.5)
+                    time.sleep(1.5)
                 else:
                     log.error(f"  Failed to close {sym} after 3 attempts: {err}")
                     failed_legs.append(sym)
 
     total = len(leg_symbols)
+    success = len(failed_legs) == 0
+
     if failed_legs:
         log.warning(f"  Partial close: {closed_count}/{total} legs closed. "
                     f"Failed: {failed_legs}. Freeing slot anyway — "
@@ -879,29 +1081,20 @@ def close_position_by_legs(trade_client, position_state: dict) -> bool:
     else:
         log.info(f"  All {closed_count}/{total} legs closed successfully.")
 
-    # Always return True so _record_close() fires and state.json is updated.
-    # A partial close is better tracked as "closed with warning" than left
-    # open indefinitely causing the slot to be permanently blocked.
-    return True
+    return success, failed_legs
 
 
 # ══════════════════════════════════════════════════════════════
 #  POSITION SIZING
 # ══════════════════════════════════════════════════════════════
 
-# Market-impact caps by ticker (0.1% of avg daily options volume).
-# These only activate at very large portfolio sizes — they are a safety
-# rail against bugs, not a growth limiter for normal account sizes.
-#   IWM activates at ~$1.4M portfolio  (500K daily vol × 0.1%)
-#   XBI activates at ~$160K portfolio  (75K daily vol × 0.1%)
-#   Unknown tickers: conservative 50-contract cap
+# Market-impact cap (0.1% of avg daily options volume).
+# IWM activates at ~$1.4M portfolio  (500K daily vol × 0.1%).
+# This only activates at very large portfolio sizes — a safety rail against
+# bugs, not a growth limiter for normal account sizes.
+# Other tickers can be added here if the portfolio ever expands beyond IWM.
 MARKET_IMPACT_CAP = {
     "IWM":  500,   # 0.1% of ~500K daily options volume
-    "XBI":   75,   # 0.1% of ~75K daily options volume
-    "QQQ":  500,
-    "SPY":  500,
-    "AAPL": 200,
-    "XLE":  150,
 }
 DEFAULT_CONTRACT_CAP = 50
 
@@ -911,19 +1104,19 @@ def compute_contracts(portfolio_value: float, max_loss_per_spread: float,
     """
     Number of contracts = floor(slot_budget / max_loss_per_contract).
 
-    No hard 10-contract cap — contracts scale naturally with portfolio so
+    No hard contract cap — contracts scale naturally with portfolio so
     the strategy compounds without an artificial growth ceiling.
 
     A generous ticker-specific market-impact cap acts as a safety rail
     against code bugs, not a growth limiter. At any realistic retail
     portfolio size the formula-driven count will be well below these caps.
 
-    Contract counts at typical portfolio sizes:
-      $10K:  IWM=3   XBI=4
-      $25K:  IWM=9   XBI=11
-      $50K:  IWM=18  XBI=23
-      $100K: IWM=36  XBI=46
-      $250K: IWM=91  XBI=75 (XBI market-impact cap)
+    Contract counts at typical portfolio sizes (IWM, ~$10 put width, $0.90 credit):
+      $10K:  ~2 contracts per slot
+      $25K:  ~5 contracts per slot
+      $50K:  ~10 contracts per slot
+      $100K: ~19 contracts per slot
+      $250K: ~48 contracts per slot
     """
     if max_loss_per_spread <= 0:
         return 0
@@ -935,15 +1128,8 @@ def compute_contracts(portfolio_value: float, max_loss_per_spread: float,
 
 
 # ══════════════════════════════════════════════════════════════
-#  SPY ALLOCATION MANAGER — REMOVED
-#  Portfolio is now 100% options (IWM + XBI) with 20% cash buffer.
-#  SPY buy-and-hold replaced by higher-edge options on two tickers.
+#  (SPY allocation manager removed — portfolio is 100% IWM options)
 # ══════════════════════════════════════════════════════════════
-
-def manage_spy_allocation(trade_client, data_client, state: dict,
-                          portfolio_value: float):
-    """Stub — SPY allocation removed. All capital deployed in 4×IWM options."""
-    return  # no-op
     """
     Ensure ~60% of portfolio is in SPY.
     On first run: buys the initial SPY position.
@@ -1067,16 +1253,18 @@ def update_daily_diagrams(opt_data_client, state: dict, today: date):
     not just what it looks like at expiry.
 
     Saved to: diagrams/YYYY-MM-DD_SlotID_live.png
+
+    NOTE (#28): IV is re-fit per slot via brentq on every run. With 4 slots
+    that's 4 brentq calls × 1ms each — negligible at current scale. If this
+    ever expands to many tickers/slots, consider caching the implied vol per
+    expiry across slots or fitting once on a single representative leg.
     """
     try:
         import matplotlib
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
-        import numpy as np
-        from scipy.stats import norm
-        from scipy.optimize import brentq
     except ImportError:
-        log.warning("  matplotlib/scipy not installed — skipping daily diagrams")
+        log.warning("  matplotlib not installed — skipping daily diagrams")
         return
 
     def bs(S, K, T, r, sig, opt_type):
@@ -1131,11 +1319,9 @@ def update_daily_diagrams(opt_data_client, state: dict, today: date):
         except Exception as e:
             log.warning(f"  Could not get live quotes for {slot_id}: {e}")
 
-        # Get live underlying price
+        # Get live underlying price (uses cached _fetch_history for #13)
         try:
-            import yfinance as yf
-            raw = yf.download(ticker, period="2d", auto_adjust=True,
-                              progress=False)["Close"].squeeze()
+            raw = _fetch_history(ticker, lookback_days=10)
             live_px = float(raw.dropna().iloc[-1])
         except Exception:
             pass
@@ -1339,15 +1525,19 @@ def update_portfolio_chart(portfolio_value: float, state: dict, today: date):
         try:
             log_df = pd.read_csv(log_path)
             log_df["date"] = pd.to_datetime(log_df["date"]).dt.date
-            # Only closed trades have real P&L
+            # Only closed trades have realized P&L
             closed = log_df[log_df["action"] == "close"].copy() \
                 if "action" in log_df.columns else log_df.copy()
-            if "pnl" in closed.columns:
-                closed["pnl"] = pd.to_numeric(closed["pnl"], errors="coerce").fillna(0)
+            # Column is named realized_pnl in trade_log.csv (TRADE_LOG_COLS).
+            # The old code looked for "pnl" which never existed → equity curve
+            # silently degraded to a 2-point line. (#12)
+            if "realized_pnl" in closed.columns:
+                closed["realized_pnl"] = pd.to_numeric(
+                    closed["realized_pnl"], errors="coerce").fillna(0)
                 closed = closed.sort_values("date")
                 running = initial
                 for _, row in closed.iterrows():
-                    running += row["pnl"]
+                    running += row["realized_pnl"]
                     dates_list.append(row["date"])
                     equity_list.append(running)
         except Exception as e:
@@ -1371,8 +1561,7 @@ def update_portfolio_chart(portfolio_value: float, state: dict, today: date):
         ax.tick_params(colors="#7b82a0")
         ax.grid(True, color="#2d3150", linewidth=0.4, alpha=0.5)
 
-    import datetime as dt_mod
-    date_nums = [dt_mod.datetime.combine(d, dt_mod.time()) for d in dates_list]
+    date_nums = [datetime.combine(d, datetime.min.time()) for d in dates_list]
 
     eq = np.array(equity_list)
     peak = np.maximum.accumulate(eq)
@@ -1481,9 +1670,13 @@ def manage_slot(trade_client, opt_data_client, slot_id: str,
     # Rule 1: force close near expiry
     if dte <= CONFIG["exit_dte"]:
         log.info(f"  Slot {slot_id}: DTE exit (dte={dte})")
-        if close_position_by_legs(trade_client, pos):
-            pnl = _estimate_close_pnl(opt_data_client, pos, "dte_exit")
-            _record_close(slot_state, today, "dte_exit", pnl, slot_id=slot_id, state=state)
+        success, failed_legs = close_position_by_legs(trade_client, pos)
+        pnl = _estimate_close_pnl(opt_data_client, pos)
+        reason = "dte_exit" if success else "dte_exit_partial"
+        _record_close(slot_state, today, reason, pnl,
+                      slot_id=slot_id, state=state,
+                      failed_legs=failed_legs)
+
     # Rule 2: profit target
     elif days_held >= CONFIG["min_hold_days"]:
         current_value = _get_spread_value(opt_data_client, pos)
@@ -1493,15 +1686,27 @@ def manage_slot(trade_client, opt_data_client, slot_id: str,
             if profit >= target:
                 log.info(f"  Slot {slot_id}: profit target  "
                          f"profit=${profit:.2f} >= target=${target:.2f}")
-                if close_position_by_legs(trade_client, pos):
-                    pnl = profit * pos["contracts"] * 100
-                    _record_close(slot_state, today, "profit_target", pnl, slot_id=slot_id, state=state)
+                success, failed_legs = close_position_by_legs(trade_client, pos)
+                pnl = profit * pos["contracts"] * 100
+                reason = "profit_target" if success else "profit_target_partial"
+                _record_close(slot_state, today, reason, pnl,
+                              slot_id=slot_id, state=state,
+                              failed_legs=failed_legs)
 
     return slot_state
 
 
 def _get_spread_value(opt_data_client, pos: dict) -> float:
-    """Get current mid-price sum of all legs."""
+    """
+    Get current per-share value of the spread (i.e. what it would cost to
+    buy back). For an open spread this is the sum of mid prices weighted
+    by leg side (short = +mid for the closer, long = -mid).
+
+    Returns None on quote failure for a live position.
+
+    NOTE: This function should NOT be called for expired positions —
+    use _terminal_spread_value() for those.
+    """
     try:
         syms = pos.get("leg_symbols", [])
         if not syms:
@@ -1511,6 +1716,10 @@ def _get_spread_value(opt_data_client, pos: dict) -> float:
         )
         total = 0.0
         for sym, is_short in zip(syms, pos.get("leg_sides", [])):
+            if sym not in snaps:
+                # Quote missing — could be expired or just unavailable
+                log.warning(f"  _get_spread_value: missing snapshot for {sym}")
+                return None
             q = snaps[sym].latest_quote
             mid = (float(q.bid_price) + float(q.ask_price)) / 2
             total += -mid if is_short else mid
@@ -1520,32 +1729,120 @@ def _get_spread_value(opt_data_client, pos: dict) -> float:
         return None
 
 
-def _estimate_close_pnl(opt_data_client, pos: dict, reason: str) -> float:
+def _parse_strike_from_occ(sym: str) -> tuple:
+    """
+    Parse the option type and strike from an OCC symbol.
+    Format: TICKERYYMMDD[C|P]NNNNNNNN where the last 8 digits are strike × 1000.
+    Returns (opt_type, strike) or ("?", 0.0) on parse error.
+    """
+    try:
+        # The C/P is at position -9 from the end (8 digits of strike follow)
+        ct  = sym[-9]
+        opt = "call" if ct == "C" else "put"
+        k   = int(sym[-8:]) / 1000.0
+        return opt, k
+    except Exception:
+        return "?", 0.0
+
+
+def _terminal_spread_value(pos: dict, underlying_close: float) -> float:
+    """
+    Compute the terminal per-share value of the spread at expiry, given the
+    underlying close price. Each leg's payoff is intrinsic value at expiry:
+      put:  max(K - S, 0)
+      call: max(S - K, 0)
+    Short legs add a cost-to-close (positive), long legs reduce it.
+    """
+    total = 0.0
+    for sym, is_short in zip(pos.get("leg_symbols", []), pos.get("leg_sides", [])):
+        opt, k = _parse_strike_from_occ(sym)
+        if opt == "put":
+            payoff = max(k - underlying_close, 0.0)
+        elif opt == "call":
+            payoff = max(underlying_close - k, 0.0)
+        else:
+            log.warning(f"  _terminal_spread_value: could not parse {sym}")
+            payoff = 0.0
+        total += payoff if is_short else -payoff
+    return max(total, 0.0)
+
+
+def _fetch_underlying_close(ticker: str) -> float:
+    """Pull the most recent daily close for the underlying."""
+    try:
+        ser = _fetch_history(ticker, lookback_days=10)
+        return float(ser.dropna().iloc[-1])
+    except Exception as e:
+        log.error(f"  _fetch_underlying_close({ticker}) failed: {e}")
+        return 0.0
+
+
+def _estimate_close_pnl(opt_data_client, pos: dict) -> float:
+    """
+    Best estimate of realized P&L at close. For live positions: use current
+    quotes. For expired positions (DTE ≤ 0): use terminal payoff from the
+    underlying's close price vs strikes — this is the correct accounting and
+    fixes the bug where every expired close logged $0 P&L.
+    """
+    try:
+        expiry = date.fromisoformat(str(pos.get("expiry", "")))
+        dte = (expiry - date.today()).days
+    except Exception:
+        dte = 99   # unknown; treat as live
+
+    if dte <= 0:
+        # Expired: compute terminal value from underlying close.
+        # Infer ticker from leg symbols.
+        leg_syms = pos.get("leg_symbols", [])
+        ticker = "IWM"
+        if leg_syms:
+            for t in ["IWM", "XBI", "QQQ", "SPY"]:
+                if leg_syms[0].startswith(t):
+                    ticker = t
+                    break
+        S_close = _fetch_underlying_close(ticker)
+        if S_close <= 0:
+            log.warning("  _estimate_close_pnl: could not get underlying close; reporting $0")
+            return 0.0
+        terminal_val = _terminal_spread_value(pos, S_close)
+        pnl_per_share = pos["credit_received"] - terminal_val
+        log.info(f"  Terminal P&L: {ticker} close=${S_close:.2f}  "
+                 f"terminal_val=${terminal_val:.4f}  "
+                 f"credit=${pos['credit_received']:.4f}  "
+                 f"per_share=${pnl_per_share:+.4f}")
+        return pnl_per_share * pos["contracts"] * 100
+
+    # Live: quote-based valuation
     val = _get_spread_value(opt_data_client, pos)
     if val is None:
+        log.warning("  _estimate_close_pnl: live quote unavailable; reporting $0")
         return 0.0
     return (pos["credit_received"] - val) * pos["contracts"] * 100
 
 
 def _record_close(slot_state: dict, today: date, reason: str, pnl: float,
-                  slot_id: str = "", state: dict = None):
+                  slot_id: str = "", state: dict = None,
+                  failed_legs: list = None):
     """Record close in slot_state, write to trade_log.csv, update counters."""
+    failed_legs = failed_legs or []
     pos = slot_state["position"]
     pos["close_date"]   = today.isoformat()
     pos["close_reason"] = reason
     pos["realized_pnl"] = pnl
+    if failed_legs:
+        pos["failed_legs"] = failed_legs
 
     slot_state["closed_trades"] = slot_state.get("closed_trades", [])
     slot_state["closed_trades"].append(dict(pos))
     slot_state["position"]   = None
     slot_state["next_entry"] = _next_trading_day(today)
 
-    # Write close row to trade_log.csv
     try:
         entry_d = date.fromisoformat(pos["entry_date"])
         days_h  = (today - entry_d).days
     except Exception:
         days_h  = ""
+
     log_trade({
         "date":         today.isoformat(),
         "action":       "close",
@@ -1564,20 +1861,26 @@ def _record_close(slot_state: dict, today: date, reason: str, pnl: float,
         "order_id":     pos.get("order_id", ""),
     })
 
-    # Update global state counters
     if state is not None:
         state["cumulative_pnl"] = round(state.get("cumulative_pnl", 0.0) + pnl, 2)
         state["trade_count"]    = state.get("trade_count", 0) + 1
         log.info(f"  Closed: {reason}  P&L=${pnl:,.2f}  |  "
                  f"cumulative=${state['cumulative_pnl']:,.2f}  "
                  f"trades={state['trade_count']}")
+        msg_extra = ""
+        priority  = "high" if pnl >= 0 else "urgent"
+        tags      = "chart_with_upwards_trend" if pnl >= 0 else "warning"
+        if failed_legs:
+            msg_extra = f"  ⚠ {len(failed_legs)} leg(s) FAILED to close: {failed_legs}"
+            priority  = "urgent"
+            tags      = "rotating_light,warning"
         send_alert(
             title=f"VRP: {slot_id} closed ({'profit' if pnl >= 0 else 'LOSS'})",
             message=(f"{slot_id}: closed {reason}  P&L=${pnl:,.2f}  "
                      f"cumulative=${state['cumulative_pnl']:,.2f}  "
-                     f"trades={state['trade_count']}"),
-            priority="high" if pnl >= 0 else "urgent",
-            tags="chart_with_upwards_trend" if pnl >= 0 else "warning",
+                     f"trades={state['trade_count']}{msg_extra}"),
+            priority=priority,
+            tags=tags,
         )
     else:
         log.info(f"  Closed: {reason}  P&L=${pnl:,.2f}")
@@ -1587,33 +1890,80 @@ def _record_close(slot_state: dict, today: date, reason: str, pnl: float,
 #  SLOT ENTRY
 # ══════════════════════════════════════════════════════════════
 
+# Full-day market closures (NYSE). Keep this list rolling 2 years forward.
+# Update annually — sourced from https://www.nyse.com/markets/hours-calendars
+NYSE_HOLIDAYS = {
+    # 2026
+    "2026-01-01",  # New Year's Day
+    "2026-01-19",  # MLK Day
+    "2026-02-16",  # Presidents Day
+    "2026-04-03",  # Good Friday
+    "2026-05-25",  # Memorial Day
+    "2026-06-19",  # Juneteenth
+    "2026-07-03",  # Independence Day (observed)
+    "2026-09-07",  # Labor Day
+    "2026-11-26",  # Thanksgiving
+    "2026-12-25",  # Christmas
+    # 2027
+    "2027-01-01",
+    "2027-01-18",
+    "2027-02-15",
+    "2027-03-26",
+    "2027-05-31",
+    "2027-06-18",  # Juneteenth observed (Sat)
+    "2027-07-05",  # Independence Day observed
+    "2027-09-06",
+    "2027-11-25",
+    "2027-12-24",  # Christmas observed (Sat)
+}
+
+# Half-day closes (1:00 PM ET): day before Independence Day, day after
+# Thanksgiving, Christmas Eve when on a weekday.
+NYSE_EARLY_CLOSE = {
+    "2026-07-02",  # July 3 observed full closure, so this is N/A; placeholder
+    "2026-11-27",  # day after Thanksgiving
+    "2026-12-24",  # Christmas Eve
+    "2027-11-26",
+    "2027-12-23",  # Dec 24 falls on Friday but closed in observance of Christmas
+}
+
+
 def is_market_open() -> bool:
-    """Return True if US options market is currently open (9:30-4:00 PM ET)."""
-    from datetime import timezone
-    import zoneinfo
-    try:
+    """
+    Return True if US options market is currently open.
+    Accounts for weekends, full-day NYSE holidays, and half-day closes (1pm ET).
+    """
+    if zoneinfo is not None:
         et = zoneinfo.ZoneInfo("America/New_York")
-    except Exception:
-        # fallback: UTC-5 (rough EST, ignores DST)
+    else:
+        # fallback: UTC-5 (ignores DST — fine for is-it-open check, edge cases rare)
         et = timezone(timedelta(hours=-5))
+
     now_et = datetime.now(et)
-    # Weekday 0=Mon, 4=Fri
     if now_et.weekday() > 4:
         return False
-    market_open  = now_et.replace(hour=9,  minute=30, second=0, microsecond=0)
-    market_close = now_et.replace(hour=16, minute=0,  second=0, microsecond=0)
+
+    iso = now_et.date().isoformat()
+    if iso in NYSE_HOLIDAYS:
+        return False
+
+    market_open = now_et.replace(hour=9,  minute=30, second=0, microsecond=0)
+    if iso in NYSE_EARLY_CLOSE:
+        market_close = now_et.replace(hour=13, minute=0, second=0, microsecond=0)
+    else:
+        market_close = now_et.replace(hour=16, minute=0, second=0, microsecond=0)
+
     return market_open <= now_et <= market_close
 
 
 def _next_trading_day(d) -> str:
     """
-    Return the next calendar date that is a weekday (Mon-Fri).
-    Skips Saturday → Monday, skips Sunday → Monday.
-    Used everywhere next_entry is set so slots never get gated on a
-    non-trading day that would silently delay entry by 2 extra days.
+    Return the next calendar date that is a weekday AND not an NYSE holiday.
+    Used wherever next_entry is set so slots never get gated on a non-trading
+    day that would silently delay entry by extra days.
     """
     nxt = d + timedelta(days=1)
-    while nxt.weekday() >= 5:   # 5=Sat, 6=Sun
+    while nxt.weekday() >= 5 or nxt.isoformat() in NYSE_HOLIDAYS:
         nxt += timedelta(days=1)
     return nxt.isoformat()
 
@@ -1670,27 +2020,48 @@ def enter_slot(trade_client, opt_data_client, slot_id: str,
     spread_name = regime["spread"]   # always "iron_condor"
     params      = SPREAD_PARAMS[spread_name]
     S           = regime["price"]
-    iv          = regime["iv"]
+    iv          = regime["iv"]   # initial HV×factor estimate
+    rfr         = get_risk_free_rate()
     T           = (cfg if cfg_override else CONFIG)["slot_dte"] / 365
 
     target_expiry = today + timedelta(days=CONFIG["slot_dte"])
     log.info(f"  Slot {slot_id}: entering {spread_name}  "
              f"regime={regime['trend']}+{regime['vol']}+{regime['atr']}  "
-             f"target_expiry={target_expiry}")
+             f"rfr={rfr*100:.2f}%  iv_est={iv:.3f}  target_expiry={target_expiry}")
 
-    # ── Find strikes ──────────────────────────────────────────
+    # ── Find strikes (pass 1: HV-based IV estimate) ──────────
     put_short_target = find_strike_by_delta(
-        S, CONFIG["r"], iv, T, params["put_delta"], "put")
+        S, rfr, iv, T, params["put_delta"], "put")
 
-    # Wing width scales with implied volatility so that C/R ratio stays
-    # consistent across vol regimes.  Fixed spread_pct (old approach) caused
-    # wings to stay the same dollar width regardless of IV, meaning low-vol
-    # entries had proportionally much more max_loss vs credit collected.
-    #
-    # New formula: wing = S × IV × sqrt(DTE/252) × VOL_WING_MULT
+    # ── Refine IV from actual option quote (#15) ─────────────
+    # Look up the candidate short-put contract, read its mid, then solve for
+    # the implied vol that prices it. Use that refined IV to re-pick the
+    # strike. This corrects for IV ≠ HV×factor in regimes where the surface
+    # has shifted (vol-of-vol expanding, skew changing, etc.) and prevents
+    # strikes from drifting toward ATM during high-vol shocks.
+    try:
+        probe = find_contract(trade_client, opt_data_client, ticker, "put",
+                              params["put_delta"], put_short_target, target_expiry)
+        if probe and probe.get("mid", 0) > 0 and probe.get("strike", 0) > 0:
+            iv_implied = _implied_vol_from_price(
+                S=S, K=probe["strike"], T=T, r=rfr,
+                price=probe["mid"], opt_type="put",
+            )
+            if iv_implied is not None and 0.05 < iv_implied < 2.5:
+                log.info(f"  IV refined: HV-est={iv:.3f} → implied={iv_implied:.3f} "
+                         f"(from probe {probe['symbol']} mid=${probe['mid']:.2f})")
+                iv = iv_implied
+                # Re-pick the short strike using refined IV
+                put_short_target = find_strike_by_delta(
+                    S, rfr, iv, T, params["put_delta"], "put")
+    except Exception as e:
+        log.debug(f"  IV refinement skipped: {e}")
+
+    # Wing width scales with implied volatility so the C/R ratio stays
+    # consistent across vol regimes.
+    # Formula: wing = S × IV × sqrt(DTE/252) × VOL_WING_MULT
     #   High IV (0.30): IWM=$244 → wing ≈ $17 → fits 0.20-delta short strike
     #   Low IV  (0.16): IWM=$251 → wing ≈  $9 → narrower, less max_loss
-    #
     # Clamp: min $5, max 10% of S (prevents absurd wings at extreme IV)
     VOL_WING_MULT = 0.80   # 0.8 × 1-SD move = conservative wing boundary
     iv_wing = S * iv * math.sqrt(CONFIG["slot_dte"] / 252) * VOL_WING_MULT
@@ -1730,7 +2101,7 @@ def enter_slot(trade_client, opt_data_client, slot_id: str,
     if params["call_delta"] > 0:
         call_width = max(5.0, min(round(iv_wing), round(S * 0.10)))
         call_short_target = find_strike_by_delta(
-            S, CONFIG["r"], iv, T, params["call_delta"], "call")
+            S, rfr, iv, T, params["call_delta"], "call")
         call_long_target = call_short_target + call_width
 
         short_call = find_contract(trade_client, opt_data_client, ticker, "call",
@@ -1939,9 +2310,12 @@ def run():
             slot_st["next_entry"] = gate
             log.info(f"Slot {_sid} ({_tkr}) first-run gate → {gate}")
 
-    # ── Assignment check (before anything else) ─────────────
-    log.info("Checking for overnight assignments...")
-    check_for_assignment(trade_client, state)
+    # ── Assignment check (before managing slots) ─────────────
+    # Catches overnight assignments early so manage_slot doesn't operate
+    # on broken state. Also runs once — the duplicate end-of-run call was
+    # removed when the two assignment functions were merged (#19).
+    log.info("Checking for assignments...")
+    assignment_alerts = check_assignment(trade_client, state, today)
 
     # ── Regime detection (one per ticker) ────────────────────
     log.info("Computing regimes...")
@@ -1965,12 +2339,15 @@ def run():
             log.info(f"  Slot {slot_id}: no open position")
 
     # ── Open new positions ────────────────────────────────────
-    # Rolling stagger: with 4 IWM slots, the old A↔B pair logic is replaced
-    # by a check across ALL same-ticker slots. Before entering, we find the
-    # most recent entry date among all other open IWM positions. If any
-    # entered within stagger_days, this slot waits until that date + stagger.
-    # This guarantees a 7-day minimum gap between any two IWM entries,
-    # creating the rolling offset that diversifies strikes and expiry dates.
+    # Rolling stagger across all same-ticker slots, looking at entries in
+    # both OPEN positions AND recently CLOSED trades (closed_trades history).
+    #
+    # Why include closed trades: if A/B/C/D all close on the same day (e.g.
+    # a market shock takes them all to max loss), the old logic — which only
+    # looked at currently-open positions — would let all 4 slots re-enter
+    # the same day, undoing the diversification benefit. With closed-trade
+    # history included, the next entry is gated by the most recent ENTRY
+    # date across all slots, regardless of whether that position is still open.
     STAGGER = timedelta(days=CONFIG["stagger_days"])
 
     log.info("Checking entry opportunities...")
@@ -1979,17 +2356,36 @@ def run():
         if slot_st.get("position") is None:
 
             # ── Rolling stagger check (all same-ticker slots) ─────────
-            # Find the most recently entered open position on the same ticker
-            other_entries = []
+            same_ticker_entries = []
             for other_id, other_tkr, _ in TICKER_SLOTS:
                 if other_id == slot_id or other_tkr != ticker:
                     continue
-                other_pos = state["slots"][other_id].get("position")
-                if other_pos and other_pos.get("entry_date"):
-                    other_entries.append(date.fromisoformat(other_pos["entry_date"]))
+                other_slot = state["slots"][other_id]
 
-            if other_entries:
-                most_recent = max(other_entries)
+                # Open position's entry_date
+                op = other_slot.get("position")
+                if op and op.get("entry_date"):
+                    try:
+                        same_ticker_entries.append(date.fromisoformat(op["entry_date"]))
+                    except Exception:
+                        pass
+
+                # Closed-trade history's entry_date — only consider entries
+                # within the stagger window (older entries can't gate us anyway)
+                cutoff = today - STAGGER
+                for ct in other_slot.get("closed_trades", []):
+                    ed = ct.get("entry_date")
+                    if not ed:
+                        continue
+                    try:
+                        d = date.fromisoformat(ed)
+                        if d >= cutoff:
+                            same_ticker_entries.append(d)
+                    except Exception:
+                        pass
+
+            if same_ticker_entries:
+                most_recent = max(same_ticker_entries)
                 earliest    = most_recent + STAGGER
                 if today < earliest:
                     gated_until = earliest.isoformat()
@@ -1997,8 +2393,9 @@ def run():
                     if not cur_ne or gated_until > cur_ne:
                         slot_st["next_entry"] = gated_until
                         log.info(f"  Slot {slot_id}: most recent {ticker} entry "
-                                 f"was {most_recent} — stagger gate until "
-                                 f"{gated_until} ({CONFIG['stagger_days']}d)")
+                                 f"was {most_recent} (open or closed) — stagger "
+                                 f"gate until {gated_until} "
+                                 f"({CONFIG['stagger_days']}d)")
                     state["slots"][slot_id] = slot_st
                     continue
 
@@ -2012,11 +2409,9 @@ def run():
                                  cfg_override=cfg_override)
             state["slots"][slot_id] = updated
 
-    # ── Assignment detection ─────────────────────────────────
-    log.info("Checking for assignment events...")
-    assignment_alerts = check_assignment(trade_client, state, today)
+    # ── Send per-assignment alerts (assignment_alerts gathered at start) ─
     for alert in assignment_alerts:
-        send_alert("⚠ Assignment detected", alert,
+        send_alert(title="⚠ Assignment detected", message=alert,
                    priority="urgent", tags="rotating_light,warning")
 
     # ── Save state ────────────────────────────────────────────
@@ -2024,7 +2419,7 @@ def run():
     log.info("State saved.")
 
     # ── Summary ───────────────────────────────────────────────
-    log.info("─" * 60)
+    log.info("-" * 60)
     for slot_id, ticker, slot_risk in TICKER_SLOTS:
         pos = state["slots"][slot_id].get("position")
         if pos:
@@ -2081,64 +2476,6 @@ def run():
 
 
 # ══════════════════════════════════════════════════════════════
-#  ASSIGNMENT DETECTION
-# ══════════════════════════════════════════════════════════════
-
-def check_assignment(trade_client, state: dict, today: date) -> list:
-    """
-    Scan Alpaca positions for evidence of option assignment.
-
-    Assignment turns a short option into a stock position.  When detected:
-      - The stock position itself is flagged (the bot cannot manage it)
-      - The affected slot is identified by matching the stock ticker
-        to open positions recorded in state.json
-      - A WARNING is written to the log and returned as a list of alert
-        strings so the caller can also send a push notification
-
-    The bot does NOT attempt to close stock positions automatically —
-    assignment requires human judgement (the protective long leg should
-    be exercised / stock sold, but timing matters).  The alert tells you
-    to intervene manually.
-
-    Returns: list of alert message strings (empty = no assignment detected)
-    """
-    alerts = []
-    try:
-        positions = trade_client.get_all_positions()
-    except Exception as e:
-        log.warning(f"  Assignment check: could not read positions: {e}")
-        return alerts
-
-    # Stock positions (symbol length ≤ 5, no digits) that match tracked tickers
-    TRACKED = {"IWM", "XBI", "QQQ", "SPY", "XLE"}
-    for pos in positions:
-        sym = str(pos.symbol).upper()
-        if sym in TRACKED:
-            qty       = float(pos.qty)
-            mkt_val   = float(pos.market_value)
-            unreal_pl = float(pos.unrealized_pl)
-            direction = "LONG" if qty > 0 else "SHORT"
-            msg = (f"ASSIGNMENT DETECTED: {sym} stock position found  "
-                   f"{direction} {abs(qty):.0f} shares  "
-                   f"market_value=${mkt_val:,.0f}  P&L=${unreal_pl:,.0f}  "
-                   f"— manual intervention required: exercise protective leg "
-                   f"or close stock position NOW")
-            log.warning(f"  {msg}")
-            alerts.append(msg)
-
-            # Mark the affected slot in state as needing attention
-            for slot_id, slot in state.get("slots", {}).items():
-                if slot_id.startswith(sym) and slot.get("position"):
-                    slot["position"]["assignment_alert"] = today.isoformat()
-                    log.warning(f"  Slot {slot_id} flagged for manual review")
-
-    if not alerts:
-        log.info("  Assignment check: no stock positions found — all clear")
-    return alerts
-
-
-
-# ══════════════════════════════════════════════════════════════
 #  PUSH NOTIFICATIONS (ntfy.sh)
 # ══════════════════════════════════════════════════════════════
 
@@ -2157,7 +2494,6 @@ def send_alert(title: str, message: str, priority: str = "default",
     Tags map to emoji in the app: robot, warning, white_check_mark,
                                    rotating_light, chart_with_upwards_trend
     """
-    import urllib.request, os
     topic = os.environ.get("NTFY_TOPIC", "")
     if not topic:
         log.debug("  NTFY_TOPIC not set — skipping push notification")
@@ -2181,5 +2517,54 @@ def send_alert(title: str, message: str, priority: str = "default",
     except Exception as e:
         log.warning(f"  Alert send failed: {e}")
 
+# ══════════════════════════════════════════════════════════════
+#  CLI ENTRYPOINT
+# ══════════════════════════════════════════════════════════════
+
+def dump_state_cli() -> int:
+    """
+    Pretty-print state.json for debugging. Returns process exit code.
+    Useful when CI fails and you want to see what slots are open without
+    SSH-ing or parsing JSON by eye.
+    """
+    state = load_state()
+    today = date.today()
+    print(f"State file: {CONFIG['state_file']}")
+    print(f"Today:      {today}")
+    print(f"Initial:    ${state.get('initial_capital') or 0:,.2f}")
+    print(f"Cumulative: ${state.get('cumulative_pnl', 0):+,.2f}")
+    print(f"Trades:     {state.get('trade_count', 0)}")
+    print()
+    for sid, slot in state.get("slots", {}).items():
+        pos = slot.get("position")
+        if pos:
+            try:
+                dte = (date.fromisoformat(str(pos["expiry"])) - today).days
+            except Exception:
+                dte = "?"
+            print(f"  {sid}: OPEN  {pos.get('spread', '?')}  "
+                  f"{pos.get('contracts', 0)}c  "
+                  f"DTE={dte}  credit=${pos.get('credit_received', 0):.4f}  "
+                  f"max_loss=${pos.get('max_loss', 0):.4f}  "
+                  f"entry={pos.get('entry_date', '?')}")
+            if pos.get("assignment_alert"):
+                print(f"      ⚠ ASSIGNMENT ALERT raised on {pos['assignment_alert']}")
+        else:
+            print(f"  {sid}: empty  next_entry={slot.get('next_entry', 'now')}  "
+                  f"closed={len(slot.get('closed_trades', []))}")
+    if state.get("seen_assignments"):
+        print()
+        print("Seen assignments:")
+        for k in state["seen_assignments"]:
+            print(f"  {k}")
+    return 0
+
+
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="VRP Live Trader — Alpaca")
+    parser.add_argument("--dump-state", action="store_true",
+                        help="Pretty-print state.json and exit without trading")
+    args = parser.parse_args()
+    if args.dump_state:
+        sys.exit(dump_state_cli())
     run()
