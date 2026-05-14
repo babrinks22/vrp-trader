@@ -225,13 +225,15 @@ def load_state() -> dict:
     return {
         "slots": {
             "IWM_A": {"position": None, "next_entry": None, "closed_trades": []},
-            "IWM_B": {"position": None, "next_entry": None, "closed_trades": []},
+            "QQQ_B": {"position": None, "next_entry": None, "closed_trades": []},
             "IWM_C": {"position": None, "next_entry": None, "closed_trades": []},
-            "IWM_D": {"position": None, "next_entry": None, "closed_trades": []},
+            "QQQ_D": {"position": None, "next_entry": None, "closed_trades": []},
         },
         "initial_capital": None,
         "cumulative_pnl":  0.0,
         "trade_count":     0,
+        "equity_history":  [],   # list of {"date": YYYY-MM-DD, "value": float}
+                                  # populated daily for the equity chart
     }
 
 
@@ -252,10 +254,39 @@ TRADE_LOG_COLS = [
 ]
 
 
+def _validate_or_rotate_trade_log(path: Path):
+    """
+    If trade_log.csv exists with a header that doesn't match TRADE_LOG_COLS
+    exactly, rotate it to trade_log_legacy_<YYYYMMDD>.csv and start fresh.
+    This is a one-shot self-heal for the schema drift that accumulated when
+    columns were added over time without rewriting the header.
+    """
+    if not path.exists():
+        return
+    try:
+        with open(path, "r", newline="") as fh:
+            first_line = fh.readline().strip()
+        expected = ",".join(TRADE_LOG_COLS)
+        if first_line == expected:
+            return   # header matches, nothing to do
+        # Mismatch — rotate
+        from datetime import datetime as _dt
+        ts = _dt.now().strftime("%Y%m%d_%H%M%S")
+        rotated = path.with_name(f"trade_log_legacy_{ts}.csv")
+        path.rename(rotated)
+        log.warning(f"  trade_log.csv header drift detected. "
+                    f"Rotated old file → {rotated.name}. "
+                    f"A fresh trade_log.csv will be created on the next write "
+                    f"using the canonical {len(TRADE_LOG_COLS)}-column schema.")
+    except Exception as e:
+        log.warning(f"  Could not validate trade_log.csv header: {e}")
+
+
 def log_trade(record: dict):
     """Append one row to trade_log.csv using the fixed canonical schema."""
     import csv as _csv
     path = Path(CONFIG["log_file"])
+    _validate_or_rotate_trade_log(path)
     row  = {col: record.get(col, "") for col in TRADE_LOG_COLS}
     write_header = not path.exists()
     with open(path, "a", newline="") as fh:
@@ -1218,6 +1249,7 @@ def close_position_by_legs(trade_client, position_state: dict) -> tuple:
 # Other tickers can be added here if the portfolio ever expands beyond IWM.
 MARKET_IMPACT_CAP = {
     "IWM":  500,   # 0.1% of ~500K daily options volume
+    "QQQ":  500,   # 0.1% of ~500K daily options volume on QQQ
 }
 DEFAULT_CONTRACT_CAP = 50
 
@@ -1640,24 +1672,42 @@ def update_portfolio_chart(portfolio_value: float, state: dict, today: date):
 
     G = "#1D9E75"; R = "#E24B4A"; B = "#378ADD"; A = "#EF9F27"
 
-    # ── Build equity curve from trade log ─────────────────────
-    dates_list  = [date.fromisoformat(str(state.get("start_date", today)))]
-    equity_list = [initial]
+    # ── Build equity curve from state["equity_history"] ──────────
+    # equity_history is appended every daily run, giving one point per
+    # trading day. Falls back to trade_log.csv close events if history
+    # is empty (e.g. before first run after upgrade).
+    eq_history = state.get("equity_history", []) or []
 
-    if log_path.exists():
+    dates_list  = []
+    equity_list = []
+
+    if eq_history:
+        # Sort by date in case of out-of-order entries
+        sorted_history = sorted(eq_history, key=lambda r: r.get("date", ""))
+        for entry in sorted_history:
+            try:
+                d = date.fromisoformat(str(entry["date"]))
+                v = float(entry["value"])
+                dates_list.append(d)
+                equity_list.append(v)
+            except Exception:
+                continue
+
+    # If equity_history is empty (first run after upgrade, no points yet),
+    # fall back to reconstructing from trade_log.csv close events
+    if not dates_list and log_path.exists():
         try:
-            log_df = pd.read_csv(log_path)
-            log_df["date"] = pd.to_datetime(log_df["date"]).dt.date
-            # Only closed trades have realized P&L
-            closed = log_df[log_df["action"] == "close"].copy() \
-                if "action" in log_df.columns else log_df.copy()
-            # Column is named realized_pnl in trade_log.csv (TRADE_LOG_COLS).
-            # The old code looked for "pnl" which never existed → equity curve
-            # silently degraded to a 2-point line. (#12)
+            log_df = pd.read_csv(log_path, on_bad_lines="skip")
+            log_df["date"] = pd.to_datetime(log_df["date"], errors="coerce").dt.date
+            log_df = log_df.dropna(subset=["date"])
+            closed = log_df[log_df.get("action", "") == "close"].copy() \
+                     if "action" in log_df.columns else log_df.copy()
             if "realized_pnl" in closed.columns:
                 closed["realized_pnl"] = pd.to_numeric(
                     closed["realized_pnl"], errors="coerce").fillna(0)
                 closed = closed.sort_values("date")
+                dates_list.append(date.fromisoformat(str(state.get("start_date", today))))
+                equity_list.append(initial)
                 running = initial
                 for _, row in closed.iterrows():
                     running += row["realized_pnl"]
@@ -1666,12 +1716,17 @@ def update_portfolio_chart(portfolio_value: float, state: dict, today: date):
         except Exception as e:
             log.warning(f"  Could not read trade log for portfolio chart: {e}")
 
-    # Always include today's actual Alpaca portfolio value as the last point
+    # Seed initial point if list is still empty (first ever run)
+    if not dates_list:
+        dates_list.append(today)
+        equity_list.append(initial)
+
+    # Always ensure today's actual Alpaca portfolio value is the last point
     if dates_list[-1] != today:
         dates_list.append(today)
         equity_list.append(portfolio_value)
     else:
-        equity_list[-1] = portfolio_value  # update today with live value
+        equity_list[-1] = portfolio_value
 
     # ── Plot ──────────────────────────────────────────────────
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(11, 7),
@@ -1732,12 +1787,22 @@ def update_portfolio_chart(portfolio_value: float, state: dict, today: date):
     ax1.legend(fontsize=8, framealpha=0.15, labelcolor="#e8eaf0",
                facecolor="#1a1d27", edgecolor="#2d3150")
 
+    # Count actual closed trades from the log (robust to malformed rows)
+    n_trades = 0
+    if log_path.exists():
+        try:
+            log_df_for_count = pd.read_csv(log_path, on_bad_lines="skip")
+            if "action" in log_df_for_count.columns:
+                n_trades = int((log_df_for_count["action"] == "close").sum())
+        except Exception:
+            pass
+
     # Header stats
     stats_txt = (f"Total P&L: {'+'if total_pnl>=0 else ''}${total_pnl:,.0f}  |  "
                  f"Return: {total_ret:+.1f}%  |  "
                  f"Max DD: {max_dd:.1f}%  |  "
                  f"CAGR: {cagr:.0f}%  |  "
-                 f"Trades: {max(len(dates_list)-2,0)}")
+                 f"Trades: {n_trades}")
     ax1.set_title(f"VRP Portfolio Equity Curve  —  {today}\n{stats_txt}",
                   color="#e8eaf0", fontsize=9, pad=10)
 
@@ -2463,17 +2528,18 @@ def run():
         log.info(f"First run — initial capital set to ${portfolio_value:,.2f}")
 
     # ── Slot configuration ────────────────────────────────────
-    # 4×IWM at 17.5% each = 70% deployed, 30% cash reserve
-    # Staggered 7 days apart → each slot has a different expiry and
-    # different strikes, providing time and price diversification.
+    # Variant C: 2×IWM + 2×QQQ at 17.5% each = 70% deployed, 30% cash reserve
+    # Backtest finding: QQQ diversification reduces 2015-style concentration
+    # tail by ~20pp max DD with only modest CAGR cost. See backtest_final.py.
+    # Slots staggered 7 days apart per ticker → time/price diversification.
     TICKER_SLOTS = [
         ("IWM_A", "IWM", CONFIG["iwm_slot_risk"]),
-        ("IWM_B", "IWM", CONFIG["iwm_slot_risk"]),
+        ("QQQ_B", "QQQ", CONFIG["iwm_slot_risk"]),
         ("IWM_C", "IWM", CONFIG["iwm_slot_risk"]),
-        ("IWM_D", "IWM", CONFIG["iwm_slot_risk"]),
+        ("QQQ_D", "QQQ", CONFIG["iwm_slot_risk"]),
     ]
     # On first run, gate B/C/D by 7/14/21 days so they open in sequence
-    FIRST_RUN_GATES = {"IWM_B": 7, "IWM_C": 14, "IWM_D": 21}
+    FIRST_RUN_GATES = {"QQQ_B": 7, "IWM_C": 14, "QQQ_D": 21}
     for _sid, _tkr, _ in TICKER_SLOTS:
         slot_st = state["slots"].setdefault(_sid, {"position": None, "next_entry": None, "closed_trades": []})
         if _sid in FIRST_RUN_GATES and slot_st.get("next_entry") is None and slot_st.get("position") is None:
@@ -2488,19 +2554,24 @@ def run():
     log.info("Checking for assignments...")
     assignment_alerts = check_assignment(trade_client, state, today)
 
-    # ── Regime detection (one per ticker) ────────────────────
+    # ── Regime detection (one per distinct ticker in TICKER_SLOTS) ─
     log.info("Computing regimes...")
     regimes = {}
-    for ticker in ["IWM"]:    # IWM-only portfolio
+    distinct_tickers = sorted({t for _, t, _ in TICKER_SLOTS})
+    for ticker in distinct_tickers:
         r = get_regime(CONFIG, ticker)
         regimes[ticker] = r
         log.info(f"  {ticker}: Trend={r['trend']}  Vol={r['vol']}  ATR={r['atr']}  → {r['spread']}")
-        log.info(f"    ${r['price']:.2f}  VIX={r['vix']:.1f}  HV={r['hv']*100:.1f}%")
+        log.info(f"    ${r['price']:.2f}  VIX={r['vix']:.1f}  HV={r['hv']*100:.1f}%  "
+                 f"RSI={r.get('rsi', 50):.1f}  fresh_VIX_high={r.get('vix_fresh_high', False)}")
 
     # ── Manage open positions ─────────────────────────────────
+    # First pass: slots in the current TICKER_SLOTS config
     log.info("Managing open positions...")
+    managed = set()
     for slot_id, ticker, slot_risk in TICKER_SLOTS:
-        slot_st = state["slots"][slot_id]
+        slot_st = state["slots"].setdefault(slot_id, {"position": None, "next_entry": None, "closed_trades": []})
+        managed.add(slot_id)
         if slot_st.get("position"):
             updated = manage_slot(trade_client, opt_data,
                                   slot_id, slot_st, portfolio_value, today,
@@ -2508,6 +2579,20 @@ def run():
             state["slots"][slot_id] = updated
         else:
             log.info(f"  Slot {slot_id}: no open position")
+
+    # Second pass: legacy slots (still in state.json but removed from TICKER_SLOTS).
+    # We continue to manage these to close — but no new entries open here.
+    for slot_id in list(state["slots"].keys()):
+        if slot_id in managed:
+            continue
+        slot_st = state["slots"][slot_id]
+        if slot_st.get("position"):
+            log.warning(f"  Slot {slot_id}: LEGACY slot (not in current TICKER_SLOTS) — "
+                        f"managing existing position to close. No new entries will open here.")
+            updated = manage_slot(trade_client, opt_data,
+                                  slot_id, slot_st, portfolio_value, today,
+                                  state=state)
+            state["slots"][slot_id] = updated
 
     # ── Open new positions ────────────────────────────────────
     # Rolling stagger across all same-ticker slots, looking at entries in
@@ -2584,6 +2669,20 @@ def run():
     for alert in assignment_alerts:
         send_alert(title="⚠ Assignment detected", message=alert,
                    priority="urgent", tags="rotating_light,warning")
+
+    # ── Append today's portfolio value to equity history ──────
+    # This gives the equity chart daily granularity that doesn't depend on
+    # the trade_log.csv being clean. One point per trading day the bot runs.
+    eh = state.setdefault("equity_history", [])
+    today_iso = today.isoformat()
+    # Replace existing entry for today (if the bot ran twice) or append
+    if eh and eh[-1].get("date") == today_iso:
+        eh[-1] = {"date": today_iso, "value": float(portfolio_value)}
+    else:
+        eh.append({"date": today_iso, "value": float(portfolio_value)})
+    # Cap retention at 5 years of daily points to keep state.json reasonable
+    if len(eh) > 1260:
+        state["equity_history"] = eh[-1260:]
 
     # ── Save state ────────────────────────────────────────────
     save_state(state)
