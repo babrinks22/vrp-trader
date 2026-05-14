@@ -114,13 +114,24 @@ CONFIG = {
     "vrp_factor":      1.18,   # IV = HV × factor (IWM VRP adjustment)
 
     # ── Spread parameters ─────────────────────────────────────
-    "min_credit":      0.90,   # minimum net credit per share.
-                               # Derived from abs slippage model: $0.30 fixed
-                               # bid-ask cost + $0.60 backtest-optimal net credit
-                               # = $0.90 gross minimum. Passes all VIX≥15 fills;
-                               # only blocks ultra-calm (VIX<14) entries where
-                               # slippage would exceed 33% of gross credit.
-                               # prevents entering when IV is so low the reward is negligible
+    # Per-spread minimum credits — iron condor collects ~2× the credit of
+    # single-side spreads (4 vs 2 legs), so the IC gate is correspondingly
+    # higher. Values empirically calibrated as a high-EV-margin filter:
+    # they pass only trades with enough cushion that the expected-value
+    # math survives realistic VRP variance.
+    "min_credit_ic":     0.90,   # iron condor (4 legs)
+    "min_credit_pcs":    0.50,   # put credit spread (2 legs)
+    "min_credit_ccs":    0.50,   # call credit spread (2 legs)
+    "min_credit":        0.90,   # legacy field — kept for backwards compat
+
+    # ── Indicator parameters (V-bottom protection for CCS) ────
+    "rsi_period":          14,   # Wilder RSI period on underlying close
+    "rsi_ccs_threshold":   43,   # block CCS entries when RSI < this
+                                 # (avoids selling calls into oversold bottoms
+                                 # vulnerable to V-bottom reversal)
+    "vix_fresh_lookback":  60,   # window for fresh-VIX-high panic-peak detection
+    "panic_call_delta":    0.10, # widened short-call delta during
+                                 # bearish + fresh-60d-VIX-high
     "r":               0.04,   # risk-free rate fallback if live ^IRX fetch fails
     "max_quote_spread_pct": 0.30,  # skip options where (ask-bid)/mid > this (#14)
 
@@ -136,16 +147,54 @@ CONFIG = {
 
 
 # ══════════════════════════════════════════════════════════════
-#  REGIME / SPREAD CONFIG (iron-condor-only — see history note)
+#  REGIME / SPREAD CONFIG  (regime-mapped — see PATCH discussion)
 # ══════════════════════════════════════════════════════════════
-
-# Out-of-sample validation across 23 tickers showed iron_condor outperforms
-# regime-selected spreads on $/trade. The full REGIME_MAP has been archived;
-# this file uses iron_condor in every regime that isn't in the skip-2 gate.
-# History reference: see git tag pre-iron-condor-only for the legacy map.
+#
+# Strategy:
+#   - IC  in neutral regimes with stable/falling vol  → premium harvest
+#   - PCS in bullish regimes                          → directional vol selling
+#   - CCS in bearish regimes (with RSI gate)          → crash protection
+#   - SKIP in neutral + expanding vol                 → uncertain direction
+#
+# Refinements baked in:
+#   - CCS requires RSI(14) ≥ rsi_ccs_threshold (avoids V-bottom reversals)
+#   - In bearish + fresh-60d-VIX-high: short call delta = panic_call_delta
+#     (V-spike protection via wider call wing)
+#
+# Out-of-sample sweep verified the 43-45 RSI threshold plateau is real
+# signal (see backtest_v5). 43 chosen as conservative edge of plateau.
 
 SPREAD_PARAMS = {
-    "iron_condor": {"put_delta": 0.20, "call_delta": 0.20, "put_width_mult": 1.0},
+    "iron_condor":        {"put_delta": 0.20, "call_delta": 0.20, "put_width_mult": 1.0},
+    "put_credit_spread":  {"put_delta": 0.20, "call_delta": 0.00, "put_width_mult": 1.0},
+    "call_credit_spread": {"put_delta": 0.00, "call_delta": 0.20, "put_width_mult": 1.0},
+}
+
+# Regime → spread map. (trend, vol_level, atr_direction) → spread or "SKIP".
+REGIME_MAP = {
+    # Bullish: PCS by default — call side most likely to be tested in uptrends
+    ("bullish", "low",  "contracting"): "put_credit_spread",
+    ("bullish", "low",  "expanding"):   "put_credit_spread",
+    ("bullish", "mid",  "contracting"): "iron_condor",   # boring uptrend → full IC
+    ("bullish", "mid",  "expanding"):   "put_credit_spread",
+    ("bullish", "high", "contracting"): "put_credit_spread",
+    ("bullish", "high", "expanding"):   "put_credit_spread",
+
+    # Neutral: IC when vol contracting, SKIP when expanding (legacy skip-2)
+    ("neutral", "low",  "contracting"): "iron_condor",
+    ("neutral", "low",  "expanding"):   "SKIP",
+    ("neutral", "mid",  "contracting"): "iron_condor",
+    ("neutral", "mid",  "expanding"):   "SKIP",
+    ("neutral", "high", "contracting"): "iron_condor",
+    ("neutral", "high", "expanding"):   "SKIP",
+
+    # Bearish: CCS by default — short calls profit from decline
+    ("bearish", "low",  "contracting"): "call_credit_spread",
+    ("bearish", "low",  "expanding"):   "SKIP",          # legacy skip-2 entry
+    ("bearish", "mid",  "contracting"): "call_credit_spread",
+    ("bearish", "mid",  "expanding"):   "call_credit_spread",
+    ("bearish", "high", "contracting"): "call_credit_spread",
+    ("bearish", "high", "expanding"):   "call_credit_spread",
 }
 
 
@@ -501,6 +550,86 @@ def _implied_vol_from_price(S, K, T, r, price, opt_type="put"):
 
 
 # ══════════════════════════════════════════════════════════════
+#  INDICATORS — RSI + VIX fresh-high + strategy selector
+# ══════════════════════════════════════════════════════════════
+
+def compute_rsi(prices: pd.Series, period: int = 14) -> float:
+    """
+    Wilder's RSI on a price series. Returns the latest value.
+    Uses EMA with α = 1/period (canonical Wilder smoothing).
+    Returns 50.0 on insufficient data.
+    """
+    if len(prices) < period + 1:
+        return 50.0
+    delta = prices.diff()
+    gain = delta.where(delta > 0, 0.0)
+    loss = -delta.where(delta < 0, 0.0)
+    avg_gain = gain.ewm(alpha=1/period, adjust=False).mean()
+    avg_loss = loss.ewm(alpha=1/period, adjust=False).mean()
+    rs = avg_gain / avg_loss.replace(0, np.nan)
+    rsi = 100 - 100 / (1 + rs)
+    val = rsi.iloc[-1]
+    return float(val) if not pd.isna(val) else 50.0
+
+
+def is_vix_fresh_high(vix_series: pd.Series, lookback: int = 60) -> bool:
+    """
+    True if today's VIX equals the maximum over the last `lookback` trading days.
+    Used to trigger panic-peak protection (wider short-call delta in bearish regimes).
+    """
+    if len(vix_series) < lookback:
+        return False
+    today_vix = vix_series.iloc[-1]
+    window_max = vix_series.iloc[-lookback:].max()
+    return bool(today_vix >= window_max and not pd.isna(today_vix))
+
+
+def select_strategy(regime: dict, vix_fresh_high: bool,
+                    rsi_today: float, cfg: dict = None) -> dict:
+    """
+    Map a regime + indicator state to a concrete strategy decision.
+
+    Returns a dict with keys:
+      spread       : "iron_condor" | "put_credit_spread" | "call_credit_spread" | None
+      put_delta    : target delta for short put leg (0 if no put side)
+      call_delta   : target delta for short call leg (0 if no call side)
+      skip_reason  : None if entering, else a short string explaining the skip
+
+    Inputs:
+      regime          : dict from get_regime() — needs 'trend', 'vol', 'atr'
+      vix_fresh_high  : bool from is_vix_fresh_high()
+      rsi_today       : float in [0, 100]
+      cfg             : optional config override (defaults to CONFIG)
+    """
+    cfg = cfg or CONFIG
+    regime_key = (regime["trend"], regime["vol"], regime["atr"])
+    spread = REGIME_MAP.get(regime_key, "SKIP")
+
+    if spread == "SKIP":
+        return {"spread": None, "put_delta": 0.0, "call_delta": 0.0,
+                "skip_reason": f"regime {regime_key} not in entry map"}
+
+    # V-bottom gate: CCS requires RSI to have recovered from oversold zone
+    if spread == "call_credit_spread" and rsi_today < cfg["rsi_ccs_threshold"]:
+        return {"spread": None, "put_delta": 0.0, "call_delta": 0.0,
+                "skip_reason": f"RSI {rsi_today:.1f} < {cfg['rsi_ccs_threshold']} "
+                               f"(V-bottom risk on CCS)"}
+
+    params = SPREAD_PARAMS[spread]
+    put_delta  = params["put_delta"]
+    call_delta = params["call_delta"]
+
+    # Panic-peak: widen short call when bearish + fresh-60d VIX high
+    # (call_delta=0.10 instead of 0.20 — roughly 2× further OTM for V-spike cushion)
+    if (regime["trend"] == "bearish" and vix_fresh_high
+            and call_delta > 0):
+        call_delta = cfg["panic_call_delta"]
+
+    return {"spread": spread, "put_delta": put_delta,
+            "call_delta": call_delta, "skip_reason": None}
+
+
+# ══════════════════════════════════════════════════════════════
 #  REGIME DETECTION
 # ══════════════════════════════════════════════════════════════
 
@@ -642,36 +771,30 @@ def get_regime(cfg: dict, ticker: str = "IWM") -> dict:
         atr = "expanding" if af > as_ else "contracting"
 
     # ── Spread selection ─────────────────────────────────────────
-    # Always use iron_condor. Out-of-sample validation across 23 tickers
-    # confirmed iron_condor outperforms regime-selected spread on $/trade.
-    # The REGIME_MAP is retained for reference but not used for entry.
-    spread = "iron_condor"
+    # No longer hardcoded. The returned regime dict is consumed by
+    # select_strategy() in enter_slot, which maps to IC/PCS/CCS/SKIP
+    # based on REGIME_MAP plus the RSI and fresh-VIX-high gates.
+    spread = "regime_dispatched"   # placeholder; actual choice in select_strategy
 
-    # ── Skip-2 gate ───────────────────────────────────────────────
-    # Two regimes confirmed negative-EV for broad-index ETFs in both
-    # in-sample (IWM 2005-2023) and 23-ticker out-of-sample validation
-    # (p = 0.0002).  Structural reason: entering short-vega into rising IV.
-    #   neutral+high+expanding  — near-zero $/trade, 57% of tickers negative
-    #   bearish+low+expanding   — expanding ATR in falling market = vol spike risk
-    # When detected, slot sits out and retries the following day.
-    SKIP_REGIMES = {
-        ("neutral", "high", "expanding"),
-        ("bearish", "low",  "expanding"),
-    }
-    skip_entry = (trend, vol, atr) in SKIP_REGIMES
+    # ── Indicator values for strategy selection ─────────────────
+    rsi_today = compute_rsi(px, cfg["rsi_period"])
+    vix_fresh = is_vix_fresh_high(vix, cfg["vix_fresh_lookback"])
 
     iv = float(hv_val) * cfg["vrp_factor"] if not pd.isna(hv_val) else 0.20
 
     return {
-        "trend":      trend,
-        "vol":        vol,
-        "atr":        atr,
-        "hv":         float(hv_val) if not pd.isna(hv_val) else 0.20,
-        "iv":         iv,
-        "vix":        float(vix_val),
-        "price":      float(p),
-        "spread":     spread,
-        "skip_entry": skip_entry,
+        "trend":          trend,
+        "vol":            vol,
+        "atr":            atr,
+        "hv":             float(hv_val) if not pd.isna(hv_val) else 0.20,
+        "iv":             iv,
+        "vix":            float(vix_val),
+        "price":          float(p),
+        "spread":         spread,       # placeholder, see select_strategy()
+        "skip_entry":     False,         # legacy field — kept for backwards compat;
+                                         # actual skip handled by select_strategy()
+        "rsi":            rsi_today,
+        "vix_fresh_high": vix_fresh,
     }
 
 
@@ -2005,99 +2128,117 @@ def enter_slot(trade_client, opt_data_client, slot_id: str,
     except Exception:
         pass
 
-    # ── Skip-2 regime gate ───────────────────────────────────────
-    # If the current regime is one of the two statistically confirmed
-    # low-EV regimes (p=0.0002 OOS), hold cash for this cycle.
-    # The slot will retry naturally on the next daily run.
-    if regime.get("skip_entry", False):
-        skip_regime = f"{regime['trend']}+{regime['vol']}+{regime['atr']}"
-        log.info(f"  Slot {slot_id}: SKIP — regime {skip_regime} is in skip-2 "
-                 f"gate (neutral+high+expanding or bearish+low+expanding). "
+    # ── Strategy selection from regime map + indicator gates ─────
+    # Replaces the old skip-2 gate. select_strategy returns the spread
+    # type, the target deltas, and a skip_reason if entry should be
+    # blocked (either the regime maps to SKIP, or the RSI gate is firing
+    # on a CCS-candidate cell).
+    decision = select_strategy(
+        regime,
+        vix_fresh_high=regime.get("vix_fresh_high", False),
+        rsi_today=regime.get("rsi", 50.0),
+        cfg=cfg,
+    )
+
+    if decision["skip_reason"] is not None:
+        log.info(f"  Slot {slot_id}: SKIP — {decision['skip_reason']}.  "
                  f"Holding cash, will retry tomorrow.")
         slot_state["next_entry"] = _next_trading_day(today)
         return slot_state
 
-    spread_name = regime["spread"]   # always "iron_condor"
-    params      = SPREAD_PARAMS[spread_name]
+    spread_name = decision["spread"]
+    # Build params from decision — call_delta may have been widened by
+    # panic-peak detection, so we override SPREAD_PARAMS for this entry.
+    params = {
+        "put_delta":      decision["put_delta"],
+        "call_delta":     decision["call_delta"],
+        "put_width_mult": SPREAD_PARAMS[spread_name]["put_width_mult"],
+    }
+    log.info(f"  Slot {slot_id}: select_strategy → {spread_name}  "
+             f"put_delta={params['put_delta']:.2f}  "
+             f"call_delta={params['call_delta']:.2f}  "
+             f"(RSI={regime.get('rsi', 0):.1f}, "
+             f"vix_fresh_high={regime.get('vix_fresh_high', False)})")
+
     S           = regime["price"]
     iv          = regime["iv"]   # initial HV×factor estimate
     rfr         = get_risk_free_rate()
-    T           = (cfg if cfg_override else CONFIG)["slot_dte"] / 365
+    T           = cfg["slot_dte"] / 365
 
-    target_expiry = today + timedelta(days=CONFIG["slot_dte"])
+    target_expiry = today + timedelta(days=cfg["slot_dte"])
     log.info(f"  Slot {slot_id}: entering {spread_name}  "
              f"regime={regime['trend']}+{regime['vol']}+{regime['atr']}  "
              f"rfr={rfr*100:.2f}%  iv_est={iv:.3f}  target_expiry={target_expiry}")
 
-    # ── Find strikes (pass 1: HV-based IV estimate) ──────────
-    put_short_target = find_strike_by_delta(
-        S, rfr, iv, T, params["put_delta"], "put")
-
-    # ── Refine IV from actual option quote (#15) ─────────────
-    # Look up the candidate short-put contract, read its mid, then solve for
-    # the implied vol that prices it. Use that refined IV to re-pick the
-    # strike. This corrects for IV ≠ HV×factor in regimes where the surface
-    # has shifted (vol-of-vol expanding, skew changing, etc.) and prevents
-    # strikes from drifting toward ATM during high-vol shocks.
-    try:
-        probe = find_contract(trade_client, opt_data_client, ticker, "put",
-                              params["put_delta"], put_short_target, target_expiry)
-        if probe and probe.get("mid", 0) > 0 and probe.get("strike", 0) > 0:
-            iv_implied = _implied_vol_from_price(
-                S=S, K=probe["strike"], T=T, r=rfr,
-                price=probe["mid"], opt_type="put",
-            )
-            if iv_implied is not None and 0.05 < iv_implied < 2.5:
-                log.info(f"  IV refined: HV-est={iv:.3f} → implied={iv_implied:.3f} "
-                         f"(from probe {probe['symbol']} mid=${probe['mid']:.2f})")
-                iv = iv_implied
-                # Re-pick the short strike using refined IV
-                put_short_target = find_strike_by_delta(
-                    S, rfr, iv, T, params["put_delta"], "put")
-    except Exception as e:
-        log.debug(f"  IV refinement skipped: {e}")
-
-    # Wing width scales with implied volatility so the C/R ratio stays
-    # consistent across vol regimes.
+    # ── Wing width — shared across put and call sides ────────────
+    # Scales with implied vol so C/R ratio stays consistent across regimes.
     # Formula: wing = S × IV × sqrt(DTE/252) × VOL_WING_MULT
-    #   High IV (0.30): IWM=$244 → wing ≈ $17 → fits 0.20-delta short strike
-    #   Low IV  (0.16): IWM=$251 → wing ≈  $9 → narrower, less max_loss
     # Clamp: min $5, max 10% of S (prevents absurd wings at extreme IV)
     VOL_WING_MULT = 0.80   # 0.8 × 1-SD move = conservative wing boundary
-    iv_wing = S * iv * math.sqrt(CONFIG["slot_dte"] / 252) * VOL_WING_MULT
-    put_width = max(5.0, min(round(iv_wing * params["put_width_mult"]),
-                             round(S * 0.10)))
-    put_long_target = put_short_target - put_width
+    iv_wing = S * iv * math.sqrt(cfg["slot_dte"] / 252) * VOL_WING_MULT
 
-    # ── Look up contracts ─────────────────────────────────────
-    short_put = find_contract(trade_client, opt_data_client, ticker, "put",
-                              params["put_delta"], put_short_target, target_expiry)
-    long_put  = find_contract(trade_client, opt_data_client, ticker, "put",
-                              params["put_delta"] * 0.5, put_long_target, target_expiry)
+    # Initialise leg containers — populated below depending on spread type
+    legs_info   = []
+    leg_symbols = []
+    leg_sides   = []
+    net_credit  = 0.0
+    short_put = long_put = short_call = long_call = None
+    put_width = call_width = 0.0
 
-    if not short_put or not long_put:
-        log.error(f"  Slot {slot_id}: could not find put contracts, skipping")
-        slot_state["next_entry"] = _next_trading_day(today)
-        return slot_state
+    # ── PUT SIDE (for iron_condor and put_credit_spread) ─────────
+    if params["put_delta"] > 0:
+        put_short_target = find_strike_by_delta(
+            S, rfr, iv, T, params["put_delta"], "put")
 
-    # Sanity check: long put must be BELOW short put
-    if long_put["strike"] >= short_put["strike"]:
-        log.warning(f"  Slot {slot_id}: put spread inverted — "
-                    f"long put ${long_put['strike']} ≥ short put "
-                    f"${short_put['strike']}. Skipping entry.")
-        slot_state["next_entry"] = _next_trading_day(today)
-        return slot_state
+        # IV refinement (#15): probe candidate, solve for implied vol,
+        # re-pick strike. Corrects for IV ≠ HV×factor in shifted surfaces.
+        try:
+            probe = find_contract(trade_client, opt_data_client, ticker, "put",
+                                  params["put_delta"], put_short_target, target_expiry)
+            if probe and probe.get("mid", 0) > 0 and probe.get("strike", 0) > 0:
+                iv_implied = _implied_vol_from_price(
+                    S=S, K=probe["strike"], T=T, r=rfr,
+                    price=probe["mid"], opt_type="put",
+                )
+                if iv_implied is not None and 0.05 < iv_implied < 2.5:
+                    log.info(f"  IV refined: HV-est={iv:.3f} → implied={iv_implied:.3f} "
+                             f"(from probe {probe['symbol']} mid=${probe['mid']:.2f})")
+                    iv = iv_implied
+                    # Recompute wing with refined IV
+                    iv_wing = S * iv * math.sqrt(cfg["slot_dte"] / 252) * VOL_WING_MULT
+                    put_short_target = find_strike_by_delta(
+                        S, rfr, iv, T, params["put_delta"], "put")
+        except Exception as e:
+            log.debug(f"  IV refinement skipped: {e}")
 
-    legs_info = [
-        {"symbol": short_put["symbol"], "side": "sell"},
-        {"symbol": long_put["symbol"],  "side": "buy"},
-    ]
-    leg_symbols = [short_put["symbol"], long_put["symbol"]]
-    leg_sides   = [True, False]   # True = short
-    net_credit  = short_put["mid"] - long_put["mid"]
-    call_short  = None; call_long = None
+        put_width = max(5.0, min(round(iv_wing * params["put_width_mult"]),
+                                  round(S * 0.10)))
+        put_long_target = put_short_target - put_width
 
-    # ── Call side for condors ─────────────────────────────────
+        short_put = find_contract(trade_client, opt_data_client, ticker, "put",
+                                  params["put_delta"], put_short_target, target_expiry)
+        long_put  = find_contract(trade_client, opt_data_client, ticker, "put",
+                                  params["put_delta"] * 0.5, put_long_target, target_expiry)
+
+        if not short_put or not long_put:
+            log.error(f"  Slot {slot_id}: could not find put contracts, skipping")
+            slot_state["next_entry"] = _next_trading_day(today)
+            return slot_state
+
+        if long_put["strike"] >= short_put["strike"]:
+            log.warning(f"  Slot {slot_id}: put spread inverted — "
+                        f"long put ${long_put['strike']} ≥ short put "
+                        f"${short_put['strike']}. Skipping entry.")
+            slot_state["next_entry"] = _next_trading_day(today)
+            return slot_state
+
+        legs_info   += [{"symbol": short_put["symbol"], "side": "sell"},
+                        {"symbol": long_put["symbol"],  "side": "buy"}]
+        leg_symbols += [short_put["symbol"], long_put["symbol"]]
+        leg_sides   += [True, False]   # True = short
+        net_credit  += short_put["mid"] - long_put["mid"]
+
+    # ── CALL SIDE (for iron_condor and call_credit_spread) ───────
     if params["call_delta"] > 0:
         call_width = max(5.0, min(round(iv_wing), round(S * 0.10)))
         call_short_target = find_strike_by_delta(
@@ -2109,8 +2250,7 @@ def enter_slot(trade_client, opt_data_client, slot_id: str,
         long_call  = find_contract(trade_client, opt_data_client, ticker, "call",
                                    params["call_delta"] * 0.5, call_long_target, target_expiry)
 
-        # Sanity check: long call must be ABOVE short call (otherwise spread is
-        # inverted — find_contract snapped to wrong strikes on a thin chain).
+        # Sanity check: long call must be ABOVE short call
         if short_call and long_call:
             if long_call["strike"] <= short_call["strike"]:
                 log.warning(f"  Slot {slot_id}: call spread inverted — "
@@ -2118,16 +2258,23 @@ def enter_slot(trade_client, opt_data_client, slot_id: str,
                             f"${short_call['strike']}. Dropping call side.")
                 short_call = long_call = None
 
+        if not (short_call and long_call):
+            if spread_name == "iron_condor":
+                # IC can degrade to put-only if call side fails
+                log.warning(f"  Slot {slot_id}: call contracts not found, using put spread only")
+                short_call = long_call = None
+            else:
+                # CCS REQUIRES call legs — abort
+                log.error(f"  Slot {slot_id}: CCS requires call legs but none found. Skipping.")
+                slot_state["next_entry"] = _next_trading_day(today)
+                return slot_state
+
         if short_call and long_call:
-            legs_info  += [{"symbol": short_call["symbol"], "side": "sell"},
-                           {"symbol": long_call["symbol"],  "side": "buy"}]
+            legs_info   += [{"symbol": short_call["symbol"], "side": "sell"},
+                            {"symbol": long_call["symbol"],  "side": "buy"}]
             leg_symbols += [short_call["symbol"], long_call["symbol"]]
             leg_sides   += [True, False]
             net_credit  += short_call["mid"] - long_call["mid"]
-            call_short   = short_call
-            call_long    = long_call
-        else:
-            log.warning(f"  Slot {slot_id}: call contracts not found, using put spread only")
 
     if net_credit <= 0:
         log.warning(f"  Slot {slot_id}: zero/negative credit ${net_credit:.2f} — "
@@ -2135,22 +2282,38 @@ def enter_slot(trade_client, opt_data_client, slot_id: str,
         slot_state["next_entry"] = _next_trading_day(today)
         return slot_state
 
-    # ── Gate 1: minimum absolute credit ──────────────────────
-    # Rejects entries where IV is so low that bid-ask slippage eats the premium.
-    min_cr_abs = CONFIG.get("min_credit", 0.80)
+    # ── Per-spread minimum credit gate ───────────────────────
+    # Each spread type has its own threshold reflecting its leg count.
+    # IC = 4 legs collects ~2× the credit of PCS/CCS = 2 legs each, so
+    # the IC gate is correspondingly higher. These values are
+    # high-EV-margin filters — see PATCH.md for the EV reasoning.
+    min_credit_map = {
+        "iron_condor":        cfg["min_credit_ic"],
+        "put_credit_spread":  cfg["min_credit_pcs"],
+        "call_credit_spread": cfg["min_credit_ccs"],
+    }
+    min_cr_abs = min_credit_map.get(spread_name, cfg.get("min_credit", 0.80))
     if net_credit < min_cr_abs:
-        log.info(f"  Slot {slot_id}: credit ${net_credit:.3f} < minimum "
-                 f"${min_cr_abs:.2f}/share (IV too low). Skipping — retry tomorrow.")
+        log.info(f"  Slot {slot_id}: credit ${net_credit:.3f} < "
+                 f"minimum ${min_cr_abs:.2f}/share for {spread_name} "
+                 f"(IV too low). Skipping — retry tomorrow.")
         slot_state["next_entry"] = _next_trading_day(today)
         return slot_state
 
-    # CR ratio gate removed after optimisation — the $0.60 absolute credit
-    # gate outperforms a ratio gate on Sharpe (3.749 vs 2.882) and P&L.
-    # The ratio gate skipped 76% of valid trades unnecessarily.
-    log.info(f"  Slot {slot_id}: credit quality OK — ${net_credit:.3f}/share")
+    log.info(f"  Slot {slot_id}: credit quality OK — ${net_credit:.3f}/share "
+             f"(threshold ${min_cr_abs:.2f})")
 
     # ── Size ──────────────────────────────────────────────────
-    max_loss   = put_width - net_credit
+    # For single-side spreads, max_loss uses the appropriate wing.
+    # For iron_condor, both wings are sized the same (put_width == call_width).
+    if spread_name == "put_credit_spread":
+        wing_for_max_loss = put_width
+    elif spread_name == "call_credit_spread":
+        wing_for_max_loss = call_width
+    else:  # iron_condor — call wing may differ if put-side IV refinement ran;
+           # use the larger wing as the binding constraint
+        wing_for_max_loss = max(put_width, call_width) if call_width > 0 else put_width
+    max_loss   = wing_for_max_loss - net_credit
     contracts  = compute_contracts(portfolio_value, max_loss,
                                    slot_risk=(cfg_override or CONFIG).get("risk_pct"),
                                    ticker=ticker)
@@ -2181,10 +2344,12 @@ def enter_slot(trade_client, opt_data_client, slot_id: str,
                  f"= {slip_pct:.1f}%")
 
     # ── Record state ──────────────────────────────────────────
+    # Pick the canonical expiry source: short_put for IC/PCS, short_call for CCS
+    expiry_contract = short_put if short_put else short_call
     slot_state["position"] = {
         "entry_date":       today.isoformat(),
-        "expiry":           (short_put["expiry"] if hasattr(short_put["expiry"],'isoformat')
-                             else str(short_put["expiry"])),
+        "expiry":           (expiry_contract["expiry"] if hasattr(expiry_contract["expiry"],'isoformat')
+                             else str(expiry_contract["expiry"])),
         "spread":           spread_name,
         "trend_regime":     regime["trend"],
         "vol_regime":       regime["vol"],
@@ -2197,6 +2362,11 @@ def enter_slot(trade_client, opt_data_client, slot_id: str,
         "leg_sides":        leg_sides,
         "order_id":         order_id,
         "underlying_px":    S,
+        # ── Indicator state at entry (for analysis / post-hoc review) ─
+        "rsi_at_entry":     regime.get("rsi", None),
+        "vix_fresh_high":   regime.get("vix_fresh_high", False),
+        "call_delta":       params["call_delta"],   # may be panic delta
+        "put_delta":        params["put_delta"],
     }
     slot_state["next_entry"] = None
 
@@ -2220,15 +2390,16 @@ def enter_slot(trade_client, opt_data_client, slot_id: str,
     })
 
     # Save spread diagram + append to spread_log.csv
-    expiry_str = (short_put["expiry"].isoformat()
-                  if hasattr(short_put["expiry"], "isoformat")
-                  else str(short_put["expiry"]))
+    # Use the same canonical-expiry contract picked above for the position state
+    expiry_str = (expiry_contract["expiry"].isoformat()
+                  if hasattr(expiry_contract["expiry"], "isoformat")
+                  else str(expiry_contract["expiry"]))
     save_spread_diagram(
         slot_id=slot_id,
         spread_name=spread_name,
         legs_info=legs_info,
-        short_put=short_put,
-        long_put=long_put,
+        short_put=short_put,           # None for CCS
+        long_put=long_put,             # None for CCS
         short_call=short_call if params["call_delta"] > 0 else None,
         long_call=long_call   if params["call_delta"] > 0 else None,
         S=S,
