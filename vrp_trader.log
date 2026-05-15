@@ -1396,3 +1396,39 @@
 
 2026-05-14 15:59:35,260  INFO    Portfolio chart saved: diagrams/portfolio_equity.png  (value=$107,428, PnL=$-190)
 2026-05-14 15:59:35,260  INFO  Done.
+2026-05-15 15:51:19,788  INFO  ============================================================
+2026-05-15 15:51:19,788  INFO  VRP Live Trader — 2026-05-15  PAPER
+2026-05-15 15:51:19,788  INFO  ============================================================
+2026-05-15 15:51:20,232  INFO  Portfolio (last equity):   $107,245.50  (Paper)
+2026-05-15 15:51:20,233  INFO  Portfolio (live MTM):      $106,594.50  (not used for sizing — includes option bid-ask drag)
+2026-05-15 15:51:20,233  INFO  Slot QQQ_B (QQQ) first-run gate → 2026-05-22
+2026-05-15 15:51:20,233  INFO  Slot QQQ_D (QQQ) first-run gate → 2026-06-05
+2026-05-15 15:51:20,233  INFO  Checking for assignments...
+2026-05-15 15:51:20,307  INFO    Assignment check: no stock positions found — all clear
+2026-05-15 15:51:20,307  INFO  Computing regimes...
+2026-05-15 15:51:20,889  INFO    IWM: Trend=neutral  Vol=low  ATR=contracting  → regime_dispatched
+2026-05-15 15:51:20,889  INFO      $277.80  VIX=18.1  HV=17.9%  RSI=53.2  fresh_VIX_high=False
+2026-05-15 15:51:21,138  INFO    QQQ: Trend=bullish  Vol=low  ATR=contracting  → regime_dispatched
+2026-05-15 15:51:21,138  INFO      $709.29  VIX=18.1  HV=17.1%  RSI=71.7  fresh_VIX_high=False
+2026-05-15 15:51:21,138  INFO  Managing open positions...
+2026-05-15 15:51:21,138  INFO    Slot IWM_A: iron_condor  DTE=28  held=2d  credit=$2.86
+2026-05-15 15:51:21,138  INFO    Slot QQQ_B: no open position
+2026-05-15 15:51:21,138  INFO    Slot IWM_C: no open position
+2026-05-15 15:51:21,138  INFO    Slot QQQ_D: no open position
+2026-05-15 15:51:21,138  INFO  Checking entry opportunities...
+2026-05-15 15:51:21,138  INFO    Slot QQQ_B: gated until 2026-05-22
+2026-05-15 15:51:21,138  INFO    Slot QQQ_D: gated until 2026-06-05
+2026-05-15 15:51:21,139  INFO  State saved.
+2026-05-15 15:51:21,139  INFO  ------------------------------------------------------------
+2026-05-15 15:51:21,139  INFO    Slot IWM_A (IWM 17.5%): OPEN — iron_condor  11 contracts  DTE=28  credit=$2.86
+2026-05-15 15:51:21,139  INFO    Slot QQQ_B (QQQ 17.5%): EMPTY  next: 2026-05-22
+2026-05-15 15:51:21,139  INFO    Slot IWM_C (IWM 17.5%): EMPTY  next: 2026-05-27
+2026-05-15 15:51:21,139  INFO    Slot QQQ_D (QQQ 17.5%): EMPTY  next: 2026-06-05
+2026-05-15 15:51:21,139  INFO    Portfolio: $107,246  |  Cash reserve ~20%
+2026-05-15 15:51:21,139  INFO  Generating daily live diagrams...
+2026-05-15 15:51:21,549  INFO  Failed to extract font properties from /usr/share/fonts/truetype/noto/NotoColorEmoji.ttf: Can not load face (unknown file format; error code 0x2)
+2026-05-15 15:51:21,558  INFO  generated new fontManager
+2026-05-15 15:51:23,220  INFO    Live diagram saved: diagrams/2026-05-15_IWM_A_live.png  (P&L $-121, -4% captured)
+2026-05-15 15:51:23,220  INFO  Generating portfolio equity chart...
+2026-05-15 15:51:23,568  INFO    Portfolio chart saved: diagrams/portfolio_equity.png  (value=$107,246, PnL=$-372)
+2026-05-15 15:51:23,568  INFO  Done.

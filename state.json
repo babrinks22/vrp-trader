@@ -44,10 +44,26 @@
       "position": null,
       "next_entry": "2026-06-03",
       "closed_trades": []
+    },
+    "QQQ_B": {
+      "position": null,
+      "next_entry": "2026-05-22",
+      "closed_trades": []
+    },
+    "QQQ_D": {
+      "position": null,
+      "next_entry": "2026-06-05",
+      "closed_trades": []
     }
   },
   "initial_capital": 107617.64,
   "cumulative_pnl": 0.0,
   "trade_count": 0,
-  "seen_assignments": []
+  "seen_assignments": [],
+  "equity_history": [
+    {
+      "date": "2026-05-15",
+      "value": 107245.5
+    }
+  ]
 }
