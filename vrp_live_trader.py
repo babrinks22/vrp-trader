@@ -132,6 +132,10 @@ CONFIG = {
     "vix_fresh_lookback":  60,   # window for fresh-VIX-high panic-peak detection
     "panic_call_delta":    0.10, # widened short-call delta during
                                  # bearish + fresh-60d-VIX-high
+    # ── Iron-condor regime-change gate (data-validated) ───────
+    "vix_rising_lookback": 5,    # IC blocked if VIX rose over this many sessions
+    "ic_down_days_window": 10,   # window for the down-day count
+    "ic_down_days_block":  6,    # IC blocked if >= this many down days in window
     "r":               0.04,   # risk-free rate fallback if live ^IRX fetch fails
     "max_quote_spread_pct": 0.30,  # skip options where (ask-bid)/mid > this (#14)
 
@@ -225,9 +229,9 @@ def load_state() -> dict:
     return {
         "slots": {
             "IWM_A": {"position": None, "next_entry": None, "closed_trades": []},
-            "QQQ_B": {"position": None, "next_entry": None, "closed_trades": []},
+            "XLE_B": {"position": None, "next_entry": None, "closed_trades": []},
             "IWM_C": {"position": None, "next_entry": None, "closed_trades": []},
-            "QQQ_D": {"position": None, "next_entry": None, "closed_trades": []},
+            "XLE_D": {"position": None, "next_entry": None, "closed_trades": []},
         },
         "initial_capital": None,
         "cumulative_pnl":  0.0,
@@ -615,8 +619,45 @@ def is_vix_fresh_high(vix_series: pd.Series, lookback: int = 60) -> bool:
     return bool(today_vix >= window_max and not pd.isna(today_vix))
 
 
+def is_vix_rising(vix_series: pd.Series, lookback: int = 5) -> bool:
+    """
+    True if VIX has risen over the last `lookback` trading sessions.
+
+    Used as an iron-condor entry gate. Backtest + out-of-sample analysis
+    (2008-2016 real data) showed IC trades entered while VIX was rising had a
+    ~68% win rate vs ~96-100% when VIX was falling/flat. Rising VIX signals
+    stress building before it is fully priced into IV, so the IC wings are
+    more likely to be breached. See indicator_analysis.py for the study.
+    """
+    if len(vix_series) < lookback + 1:
+        return False
+    today = vix_series.iloc[-1]
+    prior = vix_series.iloc[-lookback - 1]
+    if pd.isna(today) or pd.isna(prior):
+        return False
+    return bool(today > prior)
+
+
+def count_down_days(price_series: pd.Series, lookback: int = 10) -> int:
+    """
+    Count negative-return sessions in the last `lookback` trading days.
+
+    Used as a secondary iron-condor entry gate. When 6+ of the last 10
+    sessions were down, the market is in a confirmed short-term downtrend
+    that the SMA-based regime classifier can miss (it may still read
+    "neutral" during a trend pause). Backtest showed IC win rate of ~75%
+    when down_days >= 6 vs ~87% otherwise.
+    """
+    if len(price_series) < lookback + 1:
+        return 0
+    rets = price_series.diff().iloc[-lookback:]
+    return int((rets < 0).sum())
+
+
 def select_strategy(regime: dict, vix_fresh_high: bool,
-                    rsi_today: float, cfg: dict = None) -> dict:
+                    rsi_today: float, cfg: dict = None,
+                    vix_rising: bool = False,
+                    down_days: int = 0) -> dict:
     """
     Map a regime + indicator state to a concrete strategy decision.
 
@@ -631,6 +672,8 @@ def select_strategy(regime: dict, vix_fresh_high: bool,
       vix_fresh_high  : bool from is_vix_fresh_high()
       rsi_today       : float in [0, 100]
       cfg             : optional config override (defaults to CONFIG)
+      vix_rising      : bool from is_vix_rising() — IC entry gate
+      down_days       : int from count_down_days() — IC entry gate
     """
     cfg = cfg or CONFIG
     regime_key = (regime["trend"], regime["vol"], regime["atr"])
@@ -645,6 +688,24 @@ def select_strategy(regime: dict, vix_fresh_high: bool,
         return {"spread": None, "put_delta": 0.0, "call_delta": 0.0,
                 "skip_reason": f"RSI {rsi_today:.1f} < {cfg['rsi_ccs_threshold']} "
                                f"(V-bottom risk on CCS)"}
+
+    # ── Iron-condor regime-change gate ───────────────────────────
+    # ICs are the strategy's most fragile structure during regime change:
+    # both wings are exposed, so a directional break loses on one side
+    # with no offsetting gain. Two indicators of "regime breaking" block
+    # IC entry (data-validated, see indicator_analysis.py):
+    #   - VIX rising over the last 5 sessions
+    #   - 6+ of the last 10 sessions were down
+    # When either fires, hold cash rather than sell a fragile IC.
+    if spread == "iron_condor":
+        if vix_rising:
+            return {"spread": None, "put_delta": 0.0, "call_delta": 0.0,
+                    "skip_reason": "IC blocked: VIX rising over last 5 sessions "
+                                   "(regime-change risk)"}
+        if down_days >= cfg["ic_down_days_block"]:
+            return {"spread": None, "put_delta": 0.0, "call_delta": 0.0,
+                    "skip_reason": f"IC blocked: {down_days} down days in last 10 "
+                                   f"(confirmed short-term downtrend)"}
 
     params = SPREAD_PARAMS[spread]
     put_delta  = params["put_delta"]
@@ -810,6 +871,8 @@ def get_regime(cfg: dict, ticker: str = "IWM") -> dict:
     # ── Indicator values for strategy selection ─────────────────
     rsi_today = compute_rsi(px, cfg["rsi_period"])
     vix_fresh = is_vix_fresh_high(vix, cfg["vix_fresh_lookback"])
+    vix_rising = is_vix_rising(vix, cfg["vix_rising_lookback"])
+    down_days  = count_down_days(px, cfg["ic_down_days_window"])
 
     iv = float(hv_val) * cfg["vrp_factor"] if not pd.isna(hv_val) else 0.20
 
@@ -826,6 +889,8 @@ def get_regime(cfg: dict, ticker: str = "IWM") -> dict:
                                          # actual skip handled by select_strategy()
         "rsi":            rsi_today,
         "vix_fresh_high": vix_fresh,
+        "vix_rising":     vix_rising,    # IC entry gate
+        "down_days":      down_days,     # IC entry gate
     }
 
 
@@ -1164,26 +1229,165 @@ def check_assignment(trade_client, state: dict, today: date) -> list:
     return alerts
 
 
-def close_position_by_legs(trade_client, position_state: dict) -> tuple:
+def _close_legs_mleg_limit(trade_client, opt_data_client,
+                           legs_to_close: list, contracts: int) -> tuple:
     """
-    Close an existing spread position leg by leg.
+    Close a set of legs as a single MLEG limit order, walking the debit
+    limit toward market on retries. Mirrors the entry-side submit_spread
+    ladder so the close side gets the same slippage protection.
 
-    Returns (success, failed_legs) where:
+    legs_to_close : list of (symbol, is_short) tuples
+    Returns (success: bool, closed_symbols: list).
+    A False return means the caller should fall back to market orders.
+    """
+    if not legs_to_close:
+        return True, []
+
+    # Build the closing MLEG legs — reverse of the original sides:
+    #   short leg (was sold)  → BUY  to close
+    #   long  leg (was bought)→ SELL to close
+    close_legs = []
+    for sym, is_short in legs_to_close:
+        close_legs.append(OptionLegRequest(
+            symbol=sym,
+            side=OrderSide.BUY if is_short else OrderSide.SELL,
+            ratio_qty=1,
+        ))
+
+    # Estimate the mid debit (what it costs to buy the spread back) from quotes
+    syms = [s for s, _ in legs_to_close]
+    mid_debit = None
+    try:
+        snaps = opt_data_client.get_option_snapshot(
+            OptionSnapshotRequest(symbol_or_symbols=syms))
+        debit = 0.0
+        ok = True
+        for sym, is_short in legs_to_close:
+            snap = snaps.get(sym) if hasattr(snaps, "get") else snaps[sym]
+            q = getattr(snap, "latest_quote", None) if snap else None
+            if q is None:
+                ok = False; break
+            bid = float(q.bid_price); ask = float(q.ask_price)
+            if bid <= 0 and ask <= 0:
+                ok = False; break
+            mid = (bid + ask) / 2.0
+            # short → buy back → adds to debit; long → sell → reduces debit
+            debit += mid if is_short else -mid
+        if ok:
+            mid_debit = max(0.01, round(debit, 2))
+    except Exception as e:
+        log.debug(f"  Close-quote fetch failed: {e}")
+
+    if mid_debit is None:
+        # Could not price the spread — signal caller to use market fallback
+        log.warning("  Could not price spread for limit close — "
+                    "will fall back to market orders")
+        return False, []
+
+    MAX_RETRIES = CONFIG.get("max_fill_retries", 3)
+    CONCESSION  = CONFIG.get("limit_offset", 0.05)
+    POLL_WAIT   = 15
+    limit_price = mid_debit
+
+    for attempt in range(MAX_RETRIES):
+        try:
+            order = trade_client.submit_order(
+                LimitOrderRequest(
+                    qty=contracts,
+                    time_in_force=TimeInForce.DAY,
+                    order_class=OrderClass.MLEG,
+                    limit_price=limit_price,
+                    legs=close_legs,
+                )
+            )
+            order_id = str(order.id)
+            log.info(f"  Close order submitted: {order_id}  "
+                     f"debit limit=${limit_price:.2f}  qty={contracts}  "
+                     f"attempt={attempt+1}/{MAX_RETRIES}")
+        except Exception as e:
+            log.error(f"  Close order submission failed (attempt {attempt+1}): {e}")
+            return False, []
+
+        # Poll for fill (3 × 15 s = 45 s, same cadence as entry)
+        filled = False
+        for poll in range(3):
+            time.sleep(POLL_WAIT)
+            try:
+                o = trade_client.get_order_by_id(order_id)
+                status = str(o.status).lower()
+                if "filled" in status or "complete" in status:
+                    fp = getattr(o, "filled_avg_price", None)
+                    if fp is not None:
+                        try:
+                            paid = abs(float(fp))
+                            slip = ((paid - mid_debit) / mid_debit * 100
+                                    if mid_debit > 0 else 0.0)
+                            log.info(f"  Close filled: debit ${paid:.4f}/share  "
+                                     f"(mid was ${mid_debit:.2f}, "
+                                     f"slippage {slip:+.1f}%)")
+                        except (TypeError, ValueError):
+                            log.info(f"  Close filled (limit ${limit_price:.2f})")
+                    else:
+                        log.info(f"  Close filled (price unread, "
+                                 f"limit ${limit_price:.2f})")
+                    filled = True
+                    break
+                elif "cancel" in status or "reject" in status or "expired" in status:
+                    log.warning(f"  Close order {order_id} {status}")
+                    break
+                else:
+                    log.info(f"  Close order status={status} "
+                             f"(poll {poll+1}/3, waiting {POLL_WAIT}s...)")
+            except Exception as e:
+                log.error(f"  Could not get close order status: {e}")
+
+        if filled:
+            return True, syms
+
+        # Not filled — concede: RAISE the debit limit (willing to pay more).
+        # For a debit order, a higher limit fills more easily.
+        if attempt < MAX_RETRIES - 1:
+            limit_price = round(limit_price + CONCESSION, 2)
+            log.info(f"  Close not filled — conceding ${CONCESSION:.2f} more, "
+                     f"new debit limit ${limit_price:.2f} "
+                     f"(attempt {attempt+2}/{MAX_RETRIES})")
+            try:
+                trade_client.cancel_order_by_id(order_id)
+            except Exception:
+                pass
+
+    log.warning(f"  Close MLEG limit not filled after {MAX_RETRIES} attempts — "
+                f"caller will fall back to market orders")
+    return False, []
+
+
+def close_position_by_legs(trade_client, opt_data_client,
+                           position_state: dict) -> tuple:
+    """
+    Close an existing spread position — slippage-optimized.
+
+    Execution strategy:
+      1. Read current Alpaca positions + quote each leg.
+      2. Legs worth < MIN_CLOSE_VALUE/share are left to expire worthless
+         (no closing fee — letting a $0.01 option expire beats paying to close it).
+      3. Legs with real value are closed as a single MLEG LIMIT order whose
+         debit limit walks toward market on retries — this mirrors the
+         entry-side ladder and pays the spread's combined bid-ask ONCE
+         instead of paying each leg's bid-ask separately via market orders.
+      4. If the MLEG limit can't fill (or quotes are unavailable), fall back
+         to per-leg market orders so the position is always flattened.
+
+    Returns (success, failed_legs):
       - success: True iff every leg was confirmed closed (or expired/missing)
       - failed_legs: list of leg symbols that could not be closed
 
     Best-effort semantics: the slot is freed even when some legs failed,
-    but the caller can use failed_legs to:
-      - tag the trade_log row with close_reason="dte_exit_partial"
-      - send a warning alert so the human knows to check Alpaca
-      - flag the P&L as approximate
-
-    Legs worth < MIN_CLOSE_VALUE are skipped — letting them expire worthless
-    is cheaper than paying bid-ask to close a $0.01 option.
+    but the caller uses failed_legs to tag the trade as a partial close.
     """
     MIN_CLOSE_VALUE = 0.03   # $/share — don't chase options below this
     leg_symbols  = position_state.get("leg_symbols", [])
     leg_sides    = position_state.get("leg_sides",   [])
+    contracts    = position_state.get("contracts",   1)
     closed_count = 0
     failed_legs  = []
 
@@ -1193,13 +1397,13 @@ def close_position_by_legs(trade_client, position_state: dict) -> tuple:
     except Exception:
         open_pos = {}
 
+    # Partition legs: already-gone / worthless (let expire) / worth-closing
+    worth_closing = []   # list of (symbol, is_short)
     for sym, is_short in zip(leg_symbols, leg_sides):
         if sym not in open_pos:
             log.info(f"  Leg {sym}: not in Alpaca positions — already closed/expired")
             closed_count += 1
             continue
-
-        # Skip worthless legs
         try:
             pos_val   = abs(float(open_pos[sym].market_value))
             per_share = pos_val / (abs(float(open_pos[sym].qty)) * 100)
@@ -1210,19 +1414,33 @@ def close_position_by_legs(trade_client, position_state: dict) -> tuple:
                 continue
         except Exception:
             pass
+        worth_closing.append((sym, is_short))
 
-        for attempt in range(3):
-            try:
-                trade_client.close_position(sym)
-                log.info(f"  Closed leg: {sym}")
-                closed_count += 1
-                break
-            except Exception as e:
-                err = str(e)
-                if attempt < 2:
-                    time.sleep(1.5)
-                else:
-                    log.error(f"  Failed to close {sym} after 3 attempts: {err}")
+    if worth_closing:
+        # ── Try MLEG limit close first (slippage-optimized) ─────────
+        ok, closed_syms = _close_legs_mleg_limit(
+            trade_client, opt_data_client, worth_closing, contracts)
+        if ok:
+            closed_count += len(closed_syms)
+            log.info(f"  MLEG limit close succeeded — {len(closed_syms)} legs")
+        else:
+            # ── Fallback: per-leg market orders (guarantees flat) ───
+            log.warning("  Falling back to per-leg market orders for close")
+            for sym, _is_short in worth_closing:
+                done = False
+                for attempt in range(3):
+                    try:
+                        trade_client.close_position(sym)
+                        log.info(f"  Closed leg (market fallback): {sym}")
+                        closed_count += 1
+                        done = True
+                        break
+                    except Exception as e:
+                        if attempt < 2:
+                            time.sleep(1.5)
+                        else:
+                            log.error(f"  Failed to close {sym} after 3 attempts: {e}")
+                if not done:
                     failed_legs.append(sym)
 
     total = len(leg_symbols)
@@ -1233,7 +1451,7 @@ def close_position_by_legs(trade_client, position_state: dict) -> tuple:
                     f"Failed: {failed_legs}. Freeing slot anyway — "
                     f"check Alpaca manually for remaining legs.")
     else:
-        log.info(f"  All {closed_count}/{total} legs closed successfully.")
+        log.info(f"  All {closed_count}/{total} legs closed/expired successfully.")
 
     return success, failed_legs
 
@@ -1249,7 +1467,7 @@ def close_position_by_legs(trade_client, position_state: dict) -> tuple:
 # Other tickers can be added here if the portfolio ever expands beyond IWM.
 MARKET_IMPACT_CAP = {
     "IWM":  500,   # 0.1% of ~500K daily options volume
-    "QQQ":  500,   # 0.1% of ~500K daily options volume on QQQ
+    "XLE":  300,   # 0.1% of ~300K daily options volume on XLE (less liquid than IWM)
 }
 DEFAULT_CONTRACT_CAP = 50
 
@@ -1456,7 +1674,7 @@ def update_daily_diagrams(opt_data_client, state: dict, today: date):
 
         # Infer ticker from leg symbols
         ticker = "IWM"
-        for t in ["IWM", "XBI", "QQQ", "SPY"]:
+        for t in ["IWM", "XLE", "XBI", "QQQ", "SPY"]:
             if syms and syms[0].startswith(t):
                 ticker = t; break
 
@@ -1858,7 +2076,7 @@ def manage_slot(trade_client, opt_data_client, slot_id: str,
     # Rule 1: force close near expiry
     if dte <= CONFIG["exit_dte"]:
         log.info(f"  Slot {slot_id}: DTE exit (dte={dte})")
-        success, failed_legs = close_position_by_legs(trade_client, pos)
+        success, failed_legs = close_position_by_legs(trade_client, opt_data_client, pos)
         pnl = _estimate_close_pnl(opt_data_client, pos)
         reason = "dte_exit" if success else "dte_exit_partial"
         _record_close(slot_state, today, reason, pnl,
@@ -1874,7 +2092,7 @@ def manage_slot(trade_client, opt_data_client, slot_id: str,
             if profit >= target:
                 log.info(f"  Slot {slot_id}: profit target  "
                          f"profit=${profit:.2f} >= target=${target:.2f}")
-                success, failed_legs = close_position_by_legs(trade_client, pos)
+                success, failed_legs = close_position_by_legs(trade_client, opt_data_client, pos)
                 pnl = profit * pos["contracts"] * 100
                 reason = "profit_target" if success else "profit_target_partial"
                 _record_close(slot_state, today, reason, pnl,
@@ -1984,7 +2202,7 @@ def _estimate_close_pnl(opt_data_client, pos: dict) -> float:
         leg_syms = pos.get("leg_symbols", [])
         ticker = "IWM"
         if leg_syms:
-            for t in ["IWM", "XBI", "QQQ", "SPY"]:
+            for t in ["IWM", "XLE", "XBI", "QQQ", "SPY"]:
                 if leg_syms[0].startswith(t):
                     ticker = t
                     break
@@ -2203,6 +2421,8 @@ def enter_slot(trade_client, opt_data_client, slot_id: str,
         vix_fresh_high=regime.get("vix_fresh_high", False),
         rsi_today=regime.get("rsi", 50.0),
         cfg=cfg,
+        vix_rising=regime.get("vix_rising", False),
+        down_days=regime.get("down_days", 0),
     )
 
     if decision["skip_reason"] is not None:
@@ -2528,18 +2748,22 @@ def run():
         log.info(f"First run — initial capital set to ${portfolio_value:,.2f}")
 
     # ── Slot configuration ────────────────────────────────────
-    # Variant C: 2×IWM + 2×QQQ at 17.5% each = 70% deployed, 30% cash reserve
-    # Backtest finding: QQQ diversification reduces 2015-style concentration
-    # tail by ~20pp max DD with only modest CAGR cost. See backtest_final.py.
-    # Slots staggered 7 days apart per ticker → time/price diversification.
+    # 2× IWM + 2× XLE at 17.5% each = 70% deployed, 30% cash reserve.
+    # Real-data backtest 2008-2016 ($9k start) showed this config:
+    #   CAGR 24.87% vs 4× IWM 14.2% vs S&P 4.5%
+    #   Sharpe 1.26 vs IWM-only 0.94 (higher despite worse max DD)
+    #   The XLE slots profited from oil's 2009-2014 bull AND from CCS during
+    #   the 2014-16 oil crash (100% WR on XLE_CCS).
+    # Tradeoff: max DD -42% vs IWM-only -30% during XLE-specific shocks.
+    # See backtest_9k_xle.py for full analysis. Slots staggered 7 days.
     TICKER_SLOTS = [
         ("IWM_A", "IWM", CONFIG["iwm_slot_risk"]),
-        ("QQQ_B", "QQQ", CONFIG["iwm_slot_risk"]),
+        ("XLE_B", "XLE", CONFIG["iwm_slot_risk"]),
         ("IWM_C", "IWM", CONFIG["iwm_slot_risk"]),
-        ("QQQ_D", "QQQ", CONFIG["iwm_slot_risk"]),
+        ("XLE_D", "XLE", CONFIG["iwm_slot_risk"]),
     ]
     # On first run, gate B/C/D by 7/14/21 days so they open in sequence
-    FIRST_RUN_GATES = {"QQQ_B": 7, "IWM_C": 14, "QQQ_D": 21}
+    FIRST_RUN_GATES = {"XLE_B": 7, "IWM_C": 14, "XLE_D": 21}
     for _sid, _tkr, _ in TICKER_SLOTS:
         slot_st = state["slots"].setdefault(_sid, {"position": None, "next_entry": None, "closed_trades": []})
         if _sid in FIRST_RUN_GATES and slot_st.get("next_entry") is None and slot_st.get("position") is None:
