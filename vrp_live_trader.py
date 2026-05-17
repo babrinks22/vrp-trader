@@ -105,8 +105,8 @@ CONFIG = {
     "stagger_days":    7,      # Minimum days between any two same-ticker entries
 
     # ── Regime signals ────────────────────────────────────────
-    "trend_fast":      20,     # SMA fast period
-    "trend_slow":      50,     # SMA slow period
+    "trend_fast":      14,     # SMA fast period
+    "trend_slow":      40,     # SMA slow period
     "hv_lookback":     20,     # historical vol lookback
     "ivr_lookback":    252,    # IVR percentile window
     "atr_fast":        5,
