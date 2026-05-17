@@ -100,7 +100,7 @@ CONFIG = {
     "dte_tolerance":   3,      # accept contracts within ±3 DTE of target
     "exit_dte":        3,      # force-close at ≤3 DTE
     "min_hold_days":   3,      # minimum days before profit target fires
-    "profit_target":   0.65,   # close at 65% of credit — optimal by Sharpe (19yr backtest)
+    "profit_target":   0.01,   # close at 65% of credit — optimal by Sharpe (19yr backtest)
                                # improves Sharpe 0.50→1.46 at live sizing, MaxDD -3.7%→-1.2%
     "stagger_days":    7,      # Minimum days between any two same-ticker entries
 
