@@ -100,13 +100,13 @@ CONFIG = {
     "dte_tolerance":   3,      # accept contracts within ±3 DTE of target
     "exit_dte":        3,      # force-close at ≤3 DTE
     "min_hold_days":   3,      # minimum days before profit target fires
-    "profit_target":   0.01,   # close at 65% of credit — optimal by Sharpe (19yr backtest)
+    "profit_target":   0.65,   # close at 65% of credit — optimal by Sharpe (19yr backtest)
                                # improves Sharpe 0.50→1.46 at live sizing, MaxDD -3.7%→-1.2%
     "stagger_days":    7,      # Minimum days between any two same-ticker entries
 
     # ── Regime signals ────────────────────────────────────────
-    "trend_fast":      14,     # SMA fast period
-    "trend_slow":      40,     # SMA slow period
+    "trend_fast":      20,     # SMA fast period
+    "trend_slow":      50,     # SMA slow period
     "hv_lookback":     20,     # historical vol lookback
     "ivr_lookback":    252,    # IVR percentile window
     "atr_fast":        5,
@@ -1229,6 +1229,47 @@ def check_assignment(trade_client, state: dict, today: date) -> list:
     return alerts
 
 
+def _cancel_and_wait(trade_client, order_id: str, max_wait_s: int = 20):
+    """
+    Cancel an order and poll until it reaches a terminal state, so that the
+    contracts it was holding (Alpaca 'held_for_orders') are released back to
+    available quantity.
+
+    Returns the final lowercased status string (e.g. 'canceled', 'filled')
+    or None if the terminal state could not be confirmed in time.
+
+    This MUST be called before any fallback order is placed on the same
+    legs. An un-cancelled working order keeps the contracts reserved, and a
+    follow-up order then fails with 'insufficient qty available'
+    (held_for_orders == position size, available == 0).
+    """
+    try:
+        trade_client.cancel_order_by_id(order_id)
+    except Exception as e:
+        # A cancel can legitimately fail if the order already terminal —
+        # we still poll below to find out its real state.
+        log.warning(f"  Cancel request for {order_id} failed: {e}")
+    deadline = time.time() + max_wait_s
+    while time.time() < deadline:
+        time.sleep(2)
+        try:
+            o = trade_client.get_order_by_id(order_id)
+            st = str(o.status).lower()
+            if any(k in st for k in ("cancel", "fill", "expired",
+                                     "rejected", "done")):
+                log.info(f"  Order {order_id} reached terminal state "
+                         f"'{st}' — contracts released")
+                return st
+        except Exception:
+            # Order no longer retrievable → treat as gone (qty released)
+            log.info(f"  Order {order_id} no longer retrievable — "
+                     f"treating as cancelled")
+            return "canceled"
+    log.warning(f"  Order {order_id} not confirmed terminal after "
+                f"{max_wait_s}s — a fallback order may still fail")
+    return None
+
+
 def _close_legs_mleg_limit(trade_client, opt_data_client,
                            legs_to_close: list, contracts: int) -> tuple:
     """
@@ -1344,20 +1385,27 @@ def _close_legs_mleg_limit(trade_client, opt_data_client,
         if filled:
             return True, syms
 
-        # Not filled — concede: RAISE the debit limit (willing to pay more).
-        # For a debit order, a higher limit fills more easily.
+        # Not filled. CANCEL this order and WAIT for the contracts to be
+        # released — on EVERY attempt, including the last. Leaving a
+        # working order alive holds the legs (held_for_orders) and blocks
+        # the market-order fallback with 'insufficient qty available'.
+        final_status = _cancel_and_wait(trade_client, order_id)
+        if final_status is not None and "fill" in final_status:
+            # Race: the order filled between the last poll and the cancel.
+            # The position IS closed — report success.
+            log.info(f"  Close order {order_id} filled during cancellation "
+                     f"— close succeeded")
+            return True, syms
+
+        # Concede for the next attempt (if any): RAISE the debit limit.
         if attempt < MAX_RETRIES - 1:
             limit_price = round(limit_price + CONCESSION, 2)
             log.info(f"  Close not filled — conceding ${CONCESSION:.2f} more, "
                      f"new debit limit ${limit_price:.2f} "
                      f"(attempt {attempt+2}/{MAX_RETRIES})")
-            try:
-                trade_client.cancel_order_by_id(order_id)
-            except Exception:
-                pass
 
     log.warning(f"  Close MLEG limit not filled after {MAX_RETRIES} attempts — "
-                f"caller will fall back to market orders")
+                f"order cancelled, caller will fall back to market orders")
     return False, []
 
 
@@ -1425,13 +1473,24 @@ def close_position_by_legs(trade_client, opt_data_client,
             log.info(f"  MLEG limit close succeeded — {len(closed_syms)} legs")
         else:
             # ── Fallback: per-leg market orders (guarantees flat) ───
-            log.warning("  Falling back to per-leg market orders for close")
-            for sym, _is_short in worth_closing:
+            # CRITICAL ORDERING: close SHORT legs first, long legs last.
+            # Selling a long (protective) leg while its short is still
+            # open momentarily creates a NAKED SHORT → Alpaca rejects it
+            # ('account not eligible to trade uncovered option contracts'
+            #  / 'insufficient buying power for cash-secured put').
+            # Buying back the shorts first is always margin-safe; the
+            # remaining longs can then be sold freely.
+            log.warning("  Falling back to per-leg market orders for close "
+                        "(shorts first, then longs)")
+            ordered = sorted(worth_closing,
+                             key=lambda x: 0 if x[1] else 1)  # x[1] = is_short
+            for sym, is_short in ordered:
                 done = False
                 for attempt in range(3):
                     try:
                         trade_client.close_position(sym)
-                        log.info(f"  Closed leg (market fallback): {sym}")
+                        log.info(f"  Closed leg (market fallback): {sym} "
+                                 f"({'short' if is_short else 'long'})")
                         closed_count += 1
                         done = True
                         break
@@ -2077,11 +2136,26 @@ def manage_slot(trade_client, opt_data_client, slot_id: str,
     if dte <= CONFIG["exit_dte"]:
         log.info(f"  Slot {slot_id}: DTE exit (dte={dte})")
         success, failed_legs = close_position_by_legs(trade_client, opt_data_client, pos)
-        pnl = _estimate_close_pnl(opt_data_client, pos)
-        reason = "dte_exit" if success else "dte_exit_partial"
-        _record_close(slot_state, today, reason, pnl,
-                      slot_id=slot_id, state=state,
-                      failed_legs=failed_legs)
+        total_legs = len(pos.get("leg_symbols", []))
+        if failed_legs and total_legs and len(failed_legs) >= total_legs:
+            # NOTHING closed — the position is fully intact. Do NOT record a
+            # P&L and do NOT free the slot (that would desync state from
+            # Alpaca and log a phantom result). Keep the position; it will
+            # be retried next run. Alert URGENTLY — this is near expiry.
+            log.error(f"  Slot {slot_id}: DTE-exit close FAILED ENTIRELY "
+                      f"({len(failed_legs)}/{total_legs} legs still open). "
+                      f"Position INTACT, slot NOT freed — will retry next run. "
+                      f"NEAR EXPIRY: CHECK ALPACA MANUALLY NOW.")
+            if state is not None:
+                state.setdefault("close_failures", []).append({
+                    "slot": slot_id, "date": today.isoformat(),
+                    "kind": "dte_exit", "legs": failed_legs})
+        else:
+            pnl = _estimate_close_pnl(opt_data_client, pos)
+            reason = "dte_exit" if success else "dte_exit_partial"
+            _record_close(slot_state, today, reason, pnl,
+                          slot_id=slot_id, state=state,
+                          failed_legs=failed_legs)
 
     # Rule 2: profit target
     elif days_held >= CONFIG["min_hold_days"]:
@@ -2093,11 +2167,27 @@ def manage_slot(trade_client, opt_data_client, slot_id: str,
                 log.info(f"  Slot {slot_id}: profit target  "
                          f"profit=${profit:.2f} >= target=${target:.2f}")
                 success, failed_legs = close_position_by_legs(trade_client, opt_data_client, pos)
-                pnl = profit * pos["contracts"] * 100
-                reason = "profit_target" if success else "profit_target_partial"
-                _record_close(slot_state, today, reason, pnl,
-                              slot_id=slot_id, state=state,
-                              failed_legs=failed_legs)
+                total_legs = len(pos.get("leg_symbols", []))
+                if failed_legs and total_legs and len(failed_legs) >= total_legs:
+                    # NOTHING closed — position fully intact. Do NOT log a
+                    # phantom profit and do NOT free the slot. Keep the
+                    # position; profit target will re-trigger next run with
+                    # the (now fixed) close path.
+                    log.error(f"  Slot {slot_id}: profit-target close FAILED "
+                              f"ENTIRELY ({len(failed_legs)}/{total_legs} legs "
+                              f"still open). Position INTACT, slot NOT freed, "
+                              f"no P&L recorded — will retry next run. "
+                              f"CHECK ALPACA MANUALLY.")
+                    if state is not None:
+                        state.setdefault("close_failures", []).append({
+                            "slot": slot_id, "date": today.isoformat(),
+                            "kind": "profit_target", "legs": failed_legs})
+                else:
+                    pnl = profit * pos["contracts"] * 100
+                    reason = "profit_target" if success else "profit_target_partial"
+                    _record_close(slot_state, today, reason, pnl,
+                                  slot_id=slot_id, state=state,
+                                  failed_legs=failed_legs)
 
     return slot_state
 
