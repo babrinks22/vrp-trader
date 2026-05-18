@@ -99,8 +99,8 @@ CONFIG = {
                                # (3) more time for position to recover before expiry
     "dte_tolerance":   3,      # accept contracts within ±3 DTE of target
     "exit_dte":        3,      # force-close at ≤3 DTE
-    "min_hold_days":   0,      # minimum days before profit target fires
-    "profit_target":   -0.50,   # close at 65% of credit — optimal by Sharpe (19yr backtest)
+    "min_hold_days":   3,      # minimum days before profit target fires
+    "profit_target":   0.65,   # close at 65% of credit — optimal by Sharpe (19yr backtest)
                                # improves Sharpe 0.50→1.46 at live sizing, MaxDD -3.7%→-1.2%
     "stagger_days":    7,      # Minimum days between any two same-ticker entries
 
@@ -133,7 +133,7 @@ CONFIG = {
     "panic_call_delta":    0.10, # widened short-call delta during
                                  # bearish + fresh-60d-VIX-high
     # ── Iron-condor regime-change gate (data-validated) ───────
-    "vix_rising_lookback": 30,    # IC blocked if VIX rose over this many sessions
+    "vix_rising_lookback": 5,    # IC blocked if VIX rose over this many sessions
     "ic_down_days_window": 10,   # window for the down-day count
     "ic_down_days_block":  6,    # IC blocked if >= this many down days in window
     "r":               0.04,   # risk-free rate fallback if live ^IRX fetch fails
@@ -917,6 +917,19 @@ def find_contract(trade_client, opt_data_client,
     exp_min = (target_expiry - timedelta(days=CONFIG["dte_tolerance"])).isoformat()
     exp_max = (target_expiry + timedelta(days=CONFIG["dte_tolerance"])).isoformat()
 
+    # Bound the query to a strike band around the target. WITHOUT a strike
+    # filter, get_option_contracts returns only its first page (limit
+    # default = 100) ordered strike-ascending. For an underlying with many
+    # strikes (IWM, XLE) the OTM calls — where the short call actually
+    # lives — fall past contract #100 and are never returned, so every
+    # call leg snaps to the highest *returned* strike: a degenerate,
+    # inverted call spread. Bounding by strike keeps the result small and
+    # guarantees the target's neighbourhood is present. (Puts happened to
+    # work only because their strikes sit low in the ascending list.)
+    STRIKE_BAND = 45.0   # $ above/below target — wide enough for sparse chains
+    strike_lo = max(0.5, target_strike - STRIKE_BAND)
+    strike_hi = target_strike + STRIKE_BAND
+
     try:
         contracts = trade_client.get_option_contracts(
             GetOptionContractsRequest(
@@ -925,6 +938,9 @@ def find_contract(trade_client, opt_data_client,
                 expiration_date_lte=exp_max,
                 type=ContractType.PUT if option_type == "put" else ContractType.CALL,
                 status=AssetStatus.ACTIVE,
+                strike_price_gte=f"{strike_lo:.2f}",
+                strike_price_lte=f"{strike_hi:.2f}",
+                limit=500,
             )
         )
     except Exception as e:
@@ -932,7 +948,9 @@ def find_contract(trade_client, opt_data_client,
         return None
 
     if not contracts.option_contracts:
-        log.warning(f"No {option_type} contracts found for {underlying} near {target_expiry}")
+        log.warning(f"No {option_type} contracts found for {underlying} near "
+                    f"{target_expiry} in strike band "
+                    f"${strike_lo:.0f}-${strike_hi:.0f}")
         return None
 
     # Sort by closeness to target strike — we'll walk this list until we
@@ -2634,15 +2652,23 @@ def enter_slot(trade_client, opt_data_client, slot_id: str,
                 short_call = long_call = None
 
         if not (short_call and long_call):
+            # The call side could not be built. An iron condor is a
+            # NEUTRAL, two-sided position; silently dropping the call
+            # side turns it into a directional put credit spread that the
+            # regime logic never selected and the risk model never sized.
+            # With the strike-band query fix this should be rare (genuine
+            # liquidity hole only) — when it does happen, SKIP rather than
+            # place an unintended directional bet.
             if spread_name == "iron_condor":
-                # IC can degrade to put-only if call side fails
-                log.warning(f"  Slot {slot_id}: call contracts not found, using put spread only")
-                short_call = long_call = None
+                log.warning(f"  Slot {slot_id}: iron_condor call side could not "
+                            f"be built — SKIPPING entry (will not silently "
+                            f"degrade a neutral IC into a directional put "
+                            f"spread). Retrying next trading day.")
             else:
                 # CCS REQUIRES call legs — abort
                 log.error(f"  Slot {slot_id}: CCS requires call legs but none found. Skipping.")
-                slot_state["next_entry"] = _next_trading_day(today)
-                return slot_state
+            slot_state["next_entry"] = _next_trading_day(today)
+            return slot_state
 
         if short_call and long_call:
             legs_info   += [{"symbol": short_call["symbol"], "side": "sell"},
