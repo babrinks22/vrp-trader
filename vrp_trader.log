@@ -1572,3 +1572,57 @@
 2026-05-18 14:24:46,472  INFO  Generating portfolio equity chart...
 2026-05-18 14:24:46,759  INFO    Portfolio chart saved: diagrams/portfolio_equity.png  (value=$106,672, PnL=$-946)
 2026-05-18 14:24:46,759  INFO  Done.
+2026-05-18 14:27:11,018  INFO  ============================================================
+2026-05-18 14:27:11,019  INFO  VRP Live Trader — 2026-05-18  PAPER
+2026-05-18 14:27:11,019  INFO  ============================================================
+2026-05-18 14:27:11,065  INFO  Portfolio (last equity):   $106,671.50  (Paper)
+2026-05-18 14:27:11,066  INFO  Portfolio (live MTM):      $106,912.62  (not used for sizing — includes option bid-ask drag)
+2026-05-18 14:27:11,066  INFO  Checking for assignments...
+2026-05-18 14:27:11,074  INFO    Assignment check: no stock positions found — all clear
+2026-05-18 14:27:11,075  INFO  Computing regimes...
+2026-05-18 14:27:12,323  INFO    IWM: Trend=neutral  Vol=low  ATR=contracting  → regime_dispatched
+2026-05-18 14:27:12,323  INFO      $277.28  VIX=18.4  HV=17.9%  RSI=52.5  fresh_VIX_high=False
+2026-05-18 14:27:12,880  WARNING    yfinance ^VIX attempt 1/3 failed: 'numpy.float64' object has no attribute 'dropna' — sleeping 1s
+2026-05-18 14:27:14,061  WARNING    yfinance ^VIX attempt 2/3 failed: 'numpy.float64' object has no attribute 'dropna' — sleeping 2s
+2026-05-18 14:27:16,239  WARNING    yfinance ^VIX attempt 3/3 failed: 'numpy.float64' object has no attribute 'dropna' — sleeping 4s
+2026-05-18 14:27:20,240  WARNING    using stale cache for ^VIX (last bar 2026-05-18)
+2026-05-18 14:27:20,245  INFO    XLE: Trend=neutral  Vol=low  ATR=contracting  → regime_dispatched
+2026-05-18 14:27:20,245  INFO      $59.68  VIX=18.4  HV=25.1%  RSI=60.1  fresh_VIX_high=False
+2026-05-18 14:27:20,245  INFO  Managing open positions...
+2026-05-18 14:27:20,245  INFO    Slot IWM_A: no open position
+2026-05-18 14:27:20,245  INFO    Slot XLE_B: no open position
+2026-05-18 14:27:20,246  INFO    Slot IWM_C: no open position
+2026-05-18 14:27:20,246  INFO    Slot XLE_D: no open position
+2026-05-18 14:27:20,246  INFO  Checking entry opportunities...
+2026-05-18 14:27:20,263  INFO    Slot IWM_A: select_strategy → iron_condor  put_delta=0.20  call_delta=0.20  (RSI=52.5, vix_fresh_high=False)
+2026-05-18 14:27:20,528  INFO    Slot IWM_A: entering iron_condor  regime=neutral+low+contracting  rfr=3.59%  iv_est=0.212  target_expiry=2026-06-17
+2026-05-18 14:27:20,601  INFO    IV refined: HV-est=0.212 → implied=0.277 (from probe IWM260618P00265000 mid=$3.58)
+2026-05-18 14:27:20,799  WARNING    Slot IWM_A: call spread inverted — long call $275.0 ≤ short call $275.0. Dropping call side.
+2026-05-18 14:27:20,799  WARNING    Slot IWM_A: call contracts not found, using put spread only
+2026-05-18 14:27:20,799  INFO    Slot IWM_A: credit quality OK — $1.995/share (threshold $0.90)
+2026-05-18 14:27:20,811  INFO    Order submitted: 37295165-9062-4fba-92f9-648602ff5080  limit=$1.99  qty=9  attempt=1
+2026-05-18 14:27:35,822  INFO    Fill confirmed (mleg avg): raw=-2.0100 → credit=$2.0100/share  (limit $1.99, slippage -1.0%)
+2026-05-18 14:27:35,822  INFO    Slot IWM_A: fill slippage $1.9950 (mid) → $2.0100 (fill)  = -0.8%
+2026-05-18 14:27:36,134  INFO  Failed to extract font properties from /usr/share/fonts/truetype/noto/NotoColorEmoji.ttf: Can not load face (unknown file format; error code 0x2)
+2026-05-18 14:27:36,205  INFO  generated new fontManager
+2026-05-18 14:27:37,182  INFO    Diagram saved: diagrams/2026-05-18_IWM_A_iron_condor.png
+2026-05-18 14:27:37,184  INFO    Spread logged: spread_log.csv
+2026-05-18 14:27:37,184  INFO    Slot IWM_A: opened iron_condor  9 contracts  credit=$2.0100 (mid $1.9950)  max_loss=$18.9900
+2026-05-18 14:27:37,185  INFO    Slot XLE_B: gated until 2026-05-25
+2026-05-18 14:27:37,185  INFO    Slot XLE_D: gated until 2026-06-08
+2026-05-18 14:27:37,185  INFO  State saved.
+2026-05-18 14:27:37,185  INFO  ------------------------------------------------------------
+2026-05-18 14:27:37,185  INFO    Slot IWM_A (IWM 17.5%): OPEN — iron_condor  9 contracts  DTE=31  credit=$2.01
+2026-05-18 14:27:37,185  INFO    Slot XLE_B (XLE 17.5%): EMPTY  next: 2026-05-25
+2026-05-18 14:27:37,185  INFO    Slot IWM_C (IWM 17.5%): EMPTY  next: 2026-05-27
+2026-05-18 14:27:37,185  INFO    Slot XLE_D (XLE 17.5%): EMPTY  next: 2026-06-08
+2026-05-18 14:27:37,185  INFO    Portfolio: $106,672  |  Cash reserve ~20%
+2026-05-18 14:27:37,186  INFO  Generating daily live diagrams...
+2026-05-18 14:27:37,393  WARNING    yfinance IWM attempt 1/3 failed: 'numpy.float64' object has no attribute 'dropna' — sleeping 1s
+2026-05-18 14:27:38,593  WARNING    yfinance IWM attempt 2/3 failed: 'numpy.float64' object has no attribute 'dropna' — sleeping 2s
+2026-05-18 14:27:40,779  WARNING    yfinance IWM attempt 3/3 failed: 'numpy.float64' object has no attribute 'dropna' — sleeping 4s
+2026-05-18 14:27:44,779  WARNING    using stale cache for IWM (last bar 2026-05-18)
+2026-05-18 14:27:45,392  INFO    Live diagram saved: diagrams/2026-05-18_IWM_A_live.png  (P&L +$18, 1% captured)
+2026-05-18 14:27:45,393  INFO  Generating portfolio equity chart...
+2026-05-18 14:27:45,681  INFO    Portfolio chart saved: diagrams/portfolio_equity.png  (value=$106,672, PnL=$-946)
+2026-05-18 14:27:45,681  INFO  Done.
