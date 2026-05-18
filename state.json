@@ -1,34 +1,45 @@
 {
   "slots": {
     "IWM_A": {
-      "position": {
-        "entry_date": "2026-05-13",
-        "expiry": "2026-06-12",
-        "spread": "iron_condor",
-        "trend_regime": "bullish",
-        "vol_regime": "low",
-        "atr_regime": "contracting",
-        "contracts": 11,
-        "credit_received": 2.86,
-        "credit_mid": 2.95,
-        "max_loss": 17.14,
-        "leg_symbols": [
-          "IWM260612P00266000",
-          "IWM260612P00246000",
-          "IWM260612C00300000",
-          "IWM260612C00320000"
-        ],
-        "leg_sides": [
-          true,
-          false,
-          true,
-          false
-        ],
-        "order_id": "a93a4436-4980-405d-bd3f-94c11e03e87a",
-        "underlying_px": 281.489990234375
-      },
-      "next_entry": null,
-      "closed_trades": []
+      "position": null,
+      "next_entry": "2026-05-19",
+      "closed_trades": [
+        {
+          "entry_date": "2026-05-13",
+          "expiry": "2026-06-12",
+          "spread": "iron_condor",
+          "trend_regime": "bullish",
+          "vol_regime": "low",
+          "atr_regime": "contracting",
+          "contracts": 11,
+          "credit_received": 2.86,
+          "credit_mid": 2.95,
+          "max_loss": 17.14,
+          "leg_symbols": [
+            "IWM260612P00266000",
+            "IWM260612P00246000",
+            "IWM260612C00300000",
+            "IWM260612C00320000"
+          ],
+          "leg_sides": [
+            true,
+            false,
+            true,
+            false
+          ],
+          "order_id": "a93a4436-4980-405d-bd3f-94c11e03e87a",
+          "underlying_px": 281.489990234375,
+          "close_date": "2026-05-18",
+          "close_reason": "profit_target_partial",
+          "realized_pnl": 252.99999999999997,
+          "failed_legs": [
+            "IWM260612P00266000",
+            "IWM260612P00246000",
+            "IWM260612C00300000",
+            "IWM260612C00320000"
+          ]
+        }
+      ]
     },
     "IWM_B": {
       "position": null,
@@ -54,16 +65,30 @@
       "position": null,
       "next_entry": "2026-06-05",
       "closed_trades": []
+    },
+    "XLE_B": {
+      "position": null,
+      "next_entry": "2026-05-25",
+      "closed_trades": []
+    },
+    "XLE_D": {
+      "position": null,
+      "next_entry": "2026-06-08",
+      "closed_trades": []
     }
   },
   "initial_capital": 107617.64,
-  "cumulative_pnl": 0.0,
-  "trade_count": 0,
+  "cumulative_pnl": 253.0,
+  "trade_count": 1,
   "seen_assignments": [],
   "equity_history": [
     {
       "date": "2026-05-15",
       "value": 107245.5
+    },
+    {
+      "date": "2026-05-18",
+      "value": 106671.5
     }
   ]
 }
