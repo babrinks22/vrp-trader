@@ -105,8 +105,14 @@ CONFIG = {
     "stagger_days":    7,      # Minimum days between any two same-ticker entries
 
     # ── Regime signals ────────────────────────────────────────
-    "trend_fast":      20,     # SMA fast period
-    "trend_slow":      50,     # SMA slow period
+    # Trend SMA pair: 14/40 (NOT 20/50). Chosen from the tight trend-SMA
+    # sweep and confirmed by cross-instrument validation on an 8-ETF basket
+    # (DIA/EFA/EEM/XLF/XLK/XLU/FXI/EWJ) — 14/40 sits in the high-Sharpe
+    # plateau on both IWM/XLE and the unrelated ETFs, and is the most
+    # sub-period-consistent pair tested. 20/50 ranked far lower on both.
+    # Keep 14/40 for all future versions. See etf_validate.py / trend_sweep.py.
+    "trend_fast":      14,     # SMA fast period
+    "trend_slow":      40,     # SMA slow period
     "hv_lookback":     20,     # historical vol lookback
     "ivr_lookback":    252,    # IVR percentile window
     "atr_fast":        5,
