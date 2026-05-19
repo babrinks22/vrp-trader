@@ -183,7 +183,7 @@ SPREAD_PARAMS = {
 # Regime → spread map. (trend, vol_level, atr_direction) → spread or "SKIP".
 REGIME_MAP = {
     # Bullish: PCS by default — call side most likely to be tested in uptrends
-    ("bullish", "low",  "contracting"): "put_credit_spread",
+    ("bullish", "low",  "contracting"): "iron_condor",
     ("bullish", "low",  "expanding"):   "put_credit_spread",
     ("bullish", "mid",  "contracting"): "iron_condor",   # boring uptrend → full IC
     ("bullish", "mid",  "expanding"):   "put_credit_spread",
