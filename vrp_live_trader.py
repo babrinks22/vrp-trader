@@ -683,11 +683,24 @@ def select_strategy(regime: dict, vix_fresh_high: bool,
     """
     cfg = cfg or CONFIG
     regime_key = (regime["trend"], regime["vol"], regime["atr"])
-    spread = REGIME_MAP.get(regime_key, "SKIP")
+    spread = REGIME_MAP.get(regime_key)   # None if the regime is genuinely absent
+
+    if spread is None:
+        # The regime tuple is NOT a key in REGIME_MAP at all. This is not a
+        # normal no-trade cell — it usually means an 'unknown' regime (data
+        # warmup or a data problem) or a genuine gap in the map. Flag it
+        # distinctly so it is not mistaken for a deliberate SKIP.
+        return {"spread": None, "put_delta": 0.0, "call_delta": 0.0,
+                "skip_reason": f"regime {regime_key} NOT RECOGNISED — not a key "
+                               f"in REGIME_MAP (likely an 'unknown' regime from "
+                               f"data warmup, or a map gap — worth a look)"}
 
     if spread == "SKIP":
+        # The regime IS in the map and is a designated no-trade cell. This is
+        # intended, normal behaviour (e.g. neutral trend + expanding range).
         return {"spread": None, "put_delta": 0.0, "call_delta": 0.0,
-                "skip_reason": f"regime {regime_key} not in entry map"}
+                "skip_reason": f"regime {regime_key} is a designated no-trade "
+                               f"(SKIP) regime — holding cash by design"}
 
     # V-bottom gate: CCS requires RSI to have recovered from oversold zone
     if spread == "call_credit_spread" and rsi_today < cfg["rsi_ccs_threshold"]:
