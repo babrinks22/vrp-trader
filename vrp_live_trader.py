@@ -93,7 +93,7 @@ CONFIG = {
     "iwm_slot_risk":   0.175,  # 17.5% per slot (4 slots = 70% deployed)
 
     # ── Options parameters ────────────────────────────────────
-    "slot_dte":        30,     # target DTE at entry — 30 DTE optimal:
+    "slot_dte":        5,     # target DTE at entry — 30 DTE optimal:
                                # (1) fewer trades/yr → fewer fees
                                # (2) more legs expire worthless on Alpaca ($0 close)
                                # (3) more time for position to recover before expiry
@@ -183,7 +183,7 @@ SPREAD_PARAMS = {
 # Regime → spread map. (trend, vol_level, atr_direction) → spread or "SKIP".
 REGIME_MAP = {
     # Bullish: PCS by default — call side most likely to be tested in uptrends
-    ("bullish", "low",  "contracting"): "iron_condor",
+    ("bullish", "low",  "contracting"): "put_credit_spread",
     ("bullish", "low",  "expanding"):   "put_credit_spread",
     ("bullish", "mid",  "contracting"): "iron_condor",   # boring uptrend → full IC
     ("bullish", "mid",  "expanding"):   "put_credit_spread",
