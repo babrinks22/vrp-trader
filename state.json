@@ -1,38 +1,43 @@
 {
   "slots": {
     "IWM_A": {
-      "position": {
-        "entry_date": "2026-05-20",
-        "expiry": "2026-06-18",
-        "spread": "iron_condor",
-        "trend_regime": "neutral",
-        "vol_regime": "low",
-        "atr_regime": "expanding",
-        "contracts": 10,
-        "credit_received": 2.63,
-        "credit_mid": 2.705,
-        "max_loss": 17.37,
-        "leg_symbols": [
-          "IWM260618P00262000",
-          "IWM260618P00242000",
-          "IWM260618C00298000",
-          "IWM260618C00320000"
-        ],
-        "leg_sides": [
-          true,
-          false,
-          true,
-          false
-        ],
-        "order_id": "57ebadd1-ac0e-4e96-9499-81b4fa1d7778",
-        "underlying_px": 277.79998779296875,
-        "rsi_at_entry": 53.09142493408943,
-        "vix_fresh_high": false,
-        "call_delta": 0.2,
-        "put_delta": 0.2
-      },
-      "next_entry": null,
-      "closed_trades": []
+      "position": null,
+      "next_entry": "2026-05-21",
+      "closed_trades": [
+        {
+          "entry_date": "2026-05-20",
+          "expiry": "2026-06-18",
+          "spread": "iron_condor",
+          "trend_regime": "neutral",
+          "vol_regime": "low",
+          "atr_regime": "expanding",
+          "contracts": 10,
+          "credit_received": 2.63,
+          "credit_mid": 2.705,
+          "max_loss": 17.37,
+          "leg_symbols": [
+            "IWM260618P00262000",
+            "IWM260618P00242000",
+            "IWM260618C00298000",
+            "IWM260618C00320000"
+          ],
+          "leg_sides": [
+            true,
+            false,
+            true,
+            false
+          ],
+          "order_id": "57ebadd1-ac0e-4e96-9499-81b4fa1d7778",
+          "underlying_px": 277.79998779296875,
+          "rsi_at_entry": 53.09142493408943,
+          "vix_fresh_high": false,
+          "call_delta": 0.2,
+          "put_delta": 0.2,
+          "close_date": "2026-05-20",
+          "close_reason": "profit_target",
+          "realized_pnl": -90.0000000000003
+        }
+      ]
     },
     "XLE_B": {
       "position": null,
@@ -51,8 +56,8 @@
     }
   },
   "initial_capital": 106671.5,
-  "cumulative_pnl": 0.0,
-  "trade_count": 0,
+  "cumulative_pnl": -90.0,
+  "trade_count": 1,
   "equity_history": [
     {
       "date": "2026-05-18",
