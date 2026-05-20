@@ -31,7 +31,7 @@ jobs:
         env:
           ALPACA_API_KEY: ${{ secrets.ALPACA_API_KEY }}
           ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
-          ALPACA_PAPER: "true"
+          ALPACA_PAPER: ${{ secrets.ALPACA_PAPER }}
         run: python vrp_live_trader.py
 
       - name: Commit everything
