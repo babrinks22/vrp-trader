@@ -93,7 +93,7 @@ CONFIG = {
     "iwm_slot_risk":   0.175,  # 17.5% per slot (4 slots = 70% deployed)
 
     # ── Options parameters ────────────────────────────────────
-    "slot_dte":        5,     # target DTE at entry — 30 DTE optimal:
+    "slot_dte":        30,     # target DTE at entry — 30 DTE optimal:
                                # (1) fewer trades/yr → fewer fees
                                # (2) more legs expire worthless on Alpaca ($0 close)
                                # (3) more time for position to recover before expiry
@@ -125,10 +125,18 @@ CONFIG = {
     # higher. Values empirically calibrated as a high-EV-margin filter:
     # they pass only trades with enough cushion that the expected-value
     # math survives realistic VRP variance.
-    "min_credit_ic":     0.90,   # iron condor (4 legs)
-    "min_credit_pcs":    0.50,   # put credit spread (2 legs)
-    "min_credit_ccs":    0.50,   # call credit spread (2 legs)
-    "min_credit":        0.90,   # legacy field — kept for backwards compat
+    #
+    # RATIO-BASED (credit as a fraction of wing width), NOT a flat dollar
+    # amount. A flat $ floor silently punishes lower-priced underlyings: at
+    # identical risk/reward, XLE (~$60) collects far fewer dollars of credit
+    # than IWM (~$273) purely because its strikes and wings are smaller — so
+    # a flat floor blocks economically sound XLE trades and holds XLE to a
+    # ~3x stricter standard. A ratio is price-invariant. Values calibrated
+    # to the effective ratio bar the old $0.90 / $0.50 floors produced for
+    # the average trade (see credit_gate_audit.py).
+    "min_credit_ratio_ic":   0.15,   # IC  credit must be >= 15%  of wing width
+    "min_credit_ratio_pcs":  0.09,   # PCS credit must be >= 9%   of wing width
+    "min_credit_ratio_ccs":  0.085,  # CCS credit must be >= 8.5% of wing width
 
     # ── Indicator parameters (V-bottom protection for CCS) ────
     "rsi_period":          14,   # Wilder RSI period on underlying close
@@ -139,7 +147,7 @@ CONFIG = {
     "panic_call_delta":    0.10, # widened short-call delta during
                                  # bearish + fresh-60d-VIX-high
     # ── Iron-condor regime-change gate (data-validated) ───────
-    "vix_rising_lookback": 30,    # IC blocked if VIX rose over this many sessions
+    "vix_rising_lookback": 5,    # IC blocked if VIX rose over this many sessions
     "ic_down_days_window": 10,   # window for the down-day count
     "ic_down_days_block":  6,    # IC blocked if >= this many down days in window
     "r":               0.04,   # risk-free rate fallback if live ^IRX fetch fails
@@ -2702,37 +2710,42 @@ def enter_slot(trade_client, opt_data_client, slot_id: str,
         slot_state["next_entry"] = _next_trading_day(today)
         return slot_state
 
-    # ── Per-spread minimum credit gate ───────────────────────
-    # Each spread type has its own threshold reflecting its leg count.
-    # IC = 4 legs collects ~2× the credit of PCS/CCS = 2 legs each, so
-    # the IC gate is correspondingly higher. These values are
-    # high-EV-margin filters — see PATCH.md for the EV reasoning.
-    min_credit_map = {
-        "iron_condor":        cfg["min_credit_ic"],
-        "put_credit_spread":  cfg["min_credit_pcs"],
-        "call_credit_spread": cfg["min_credit_ccs"],
-    }
-    min_cr_abs = min_credit_map.get(spread_name, cfg.get("min_credit", 0.80))
-    if net_credit < min_cr_abs:
-        log.info(f"  Slot {slot_id}: credit ${net_credit:.3f} < "
-                 f"minimum ${min_cr_abs:.2f}/share for {spread_name} "
-                 f"(IV too low). Skipping — retry tomorrow.")
-        slot_state["next_entry"] = _next_trading_day(today)
-        return slot_state
-
-    log.info(f"  Slot {slot_id}: credit quality OK — ${net_credit:.3f}/share "
-             f"(threshold ${min_cr_abs:.2f})")
-
-    # ── Size ──────────────────────────────────────────────────
-    # For single-side spreads, max_loss uses the appropriate wing.
-    # For iron_condor, both wings are sized the same (put_width == call_width).
+    # ── Wing width (needed for the ratio gate AND for sizing) ────
+    # For single-side spreads, the binding wing is that side's width.
+    # For an iron condor, use the larger wing as the binding constraint.
     if spread_name == "put_credit_spread":
         wing_for_max_loss = put_width
     elif spread_name == "call_credit_spread":
         wing_for_max_loss = call_width
-    else:  # iron_condor — call wing may differ if put-side IV refinement ran;
-           # use the larger wing as the binding constraint
+    else:  # iron_condor — call wing may differ if put-side IV refinement ran
         wing_for_max_loss = max(put_width, call_width) if call_width > 0 else put_width
+
+    # ── Per-spread RATIO credit gate ─────────────────────────────
+    # Credit must be at least X% of the wing width. This is price-
+    # invariant: IWM (~$273) and XLE (~$60) are held to the SAME
+    # risk/reward standard. A flat dollar floor would hold XLE to a
+    # ~3x stricter bar purely because of its lower price — blocking
+    # sound XLE trades (see credit_gate_audit.py for the evidence).
+    min_ratio_map = {
+        "iron_condor":        cfg["min_credit_ratio_ic"],
+        "put_credit_spread":  cfg["min_credit_ratio_pcs"],
+        "call_credit_spread": cfg["min_credit_ratio_ccs"],
+    }
+    min_ratio = min_ratio_map.get(spread_name, 0.09)
+    credit_ratio = (net_credit / wing_for_max_loss) if wing_for_max_loss > 0 else 0.0
+    if credit_ratio < min_ratio:
+        log.info(f"  Slot {slot_id}: credit ${net_credit:.3f} is only "
+                 f"{credit_ratio*100:.1f}% of the ${wing_for_max_loss:.1f} wing "
+                 f"— below the {min_ratio*100:.1f}% minimum for {spread_name}. "
+                 f"Skipping — retry tomorrow.")
+        slot_state["next_entry"] = _next_trading_day(today)
+        return slot_state
+
+    log.info(f"  Slot {slot_id}: credit quality OK — ${net_credit:.3f}/share "
+             f"= {credit_ratio*100:.1f}% of the ${wing_for_max_loss:.1f} wing "
+             f"(min {min_ratio*100:.1f}%)")
+
+    # ── Size ──────────────────────────────────────────────────
     max_loss   = wing_for_max_loss - net_credit
     contracts  = compute_contracts(portfolio_value, max_loss,
                                    slot_risk=(cfg_override or CONFIG).get("risk_pct"),
