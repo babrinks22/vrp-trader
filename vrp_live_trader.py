@@ -99,8 +99,8 @@ CONFIG = {
                                # (3) more time for position to recover before expiry
     "dte_tolerance":   3,      # accept contracts within ±3 DTE of target
     "exit_dte":        3,      # force-close at ≤3 DTE
-    "min_hold_days":   0,      # minimum days before profit target fires
-    "profit_target":   -0.50,   # close at 65% of credit — optimal by Sharpe (19yr backtest)
+    "min_hold_days":   3,      # minimum days before profit target fires
+    "profit_target":   0.65,   # close at 65% of credit — optimal by Sharpe (19yr backtest)
                                # improves Sharpe 0.50→1.46 at live sizing, MaxDD -3.7%→-1.2%
     "stagger_days":    7,      # Minimum days between any two same-ticker entries
 
@@ -147,7 +147,7 @@ CONFIG = {
     "panic_call_delta":    0.10, # widened short-call delta during
                                  # bearish + fresh-60d-VIX-high
     # ── Iron-condor regime-change gate (data-validated) ───────
-    "vix_rising_lookback": 30,    # IC blocked if VIX rose over this many sessions
+    "vix_rising_lookback": 5,    # IC blocked if VIX rose over this many sessions
     "ic_down_days_window": 10,   # window for the down-day count
     "ic_down_days_block":  6,    # IC blocked if >= this many down days in window
     "r":               0.04,   # risk-free rate fallback if live ^IRX fetch fails
@@ -200,11 +200,11 @@ REGIME_MAP = {
 
     # Neutral: IC when vol contracting, SKIP when expanding (legacy skip-2)
     ("neutral", "low",  "contracting"): "iron_condor",
-    ("neutral", "low",  "expanding"):   "iron_condor",
+    ("neutral", "low",  "expanding"):   "SKIP",
     ("neutral", "mid",  "contracting"): "iron_condor",
-    ("neutral", "mid",  "expanding"):   "iron_condor",
+    ("neutral", "mid",  "expanding"):   "SKIP",
     ("neutral", "high", "contracting"): "iron_condor",
-    ("neutral", "high", "expanding"):   "iron_condor",
+    ("neutral", "high", "expanding"):   "SKIP",
 
     # Bearish: CCS by default — short calls profit from decline
     ("bearish", "low",  "contracting"): "call_credit_spread",
