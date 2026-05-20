@@ -81,9 +81,9 @@ from alpaca.data.timeframe     import TimeFrame
 #  CONFIGURATION — edit or use environment variables
 # ══════════════════════════════════════════════════════════════
 
-API_KEY    = "PK6PFI623NBR2EUGQM4A4FCJBT"
-SECRET_KEY = "8EJbg2DxuFCcqKX3MssbvtBR5XNQhRXVGR5VFoLAqGwK"
-PAPER      = True
+API_KEY    = os.environ.get("ALPACA_API_KEY",    "YOUR_API_KEY")
+SECRET_KEY = os.environ.get("ALPACA_SECRET_KEY", "YOUR_SECRET_KEY")
+PAPER      = os.environ.get("ALPACA_PAPER", "true").lower() != "false"
 
 CONFIG = {
     # ── Portfolio allocation ──────────────────────────────────
@@ -134,7 +134,7 @@ CONFIG = {
     # ~3x stricter standard. A ratio is price-invariant. Values calibrated
     # to the effective ratio bar the old $0.90 / $0.50 floors produced for
     # the average trade (see credit_gate_audit.py).
-    "min_credit_ratio_ic":   0.01,   # IC  credit must be >= 15%  of wing width
+    "min_credit_ratio_ic":   0.15,   # IC  credit must be >= 15%  of wing width
     "min_credit_ratio_pcs":  0.09,   # PCS credit must be >= 9%   of wing width
     "min_credit_ratio_ccs":  0.085,  # CCS credit must be >= 8.5% of wing width
 
@@ -319,7 +319,8 @@ def save_spread_diagram(slot_id: str, spread_name: str, legs_info: list,
                         short_call: dict, long_call: dict,
                         S: float, net_credit: float, max_loss: float,
                         contracts: int, today: date, regime: dict,
-                        expiry_str: str):
+                        expiry_str: str,
+                        hv_est: float = None, iv_refined: float = None):
     """
     Generate and save a spread payoff diagram as a PNG.
     Saved to: diagrams/YYYY-MM-DD_SlotID_spread.png
@@ -473,6 +474,8 @@ def save_spread_diagram(slot_id: str, spread_name: str, legs_info: list,
         "max_loss":      round(max_loss, 4),
         "contracts":     contracts,
         "expiry":        expiry_str,
+        "hv_est":        round(hv_est,     4) if hv_est     is not None else "",
+        "iv_refined":    round(iv_refined, 4) if iv_refined is not None else "",
         "diagram_file":  str(filepath),
         "legs":          " | ".join(
             f"{'S' if l['is_short'] else 'L'} {l['type']} ${l['strike']:.0f}"
@@ -2582,6 +2585,9 @@ def enter_slot(trade_client, opt_data_client, slot_id: str,
 
     S           = regime["price"]
     iv          = regime["iv"]   # initial HV×factor estimate
+    # Capture raw HV and initial model IV BEFORE any refinement —
+    # logged to spread_log.csv so we can measure realized VRP later.
+    hv_est      = regime.get("hv", iv / cfg.get("vrp_factor", 1.18))
     rfr         = get_risk_free_rate()
     T           = cfg["slot_dte"] / 365
 
@@ -2842,6 +2848,8 @@ def enter_slot(trade_client, opt_data_client, slot_id: str,
         today=today,
         regime=regime,
         expiry_str=expiry_str,
+        hv_est=hv_est,              # raw 20-day HV at entry
+        iv_refined=iv,              # final IV used (post-refinement)
     )
 
     log.info(f"  Slot {slot_id}: opened {spread_name}  "
