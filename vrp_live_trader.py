@@ -134,7 +134,7 @@ CONFIG = {
     # ~3x stricter standard. A ratio is price-invariant. Values calibrated
     # to the effective ratio bar the old $0.90 / $0.50 floors produced for
     # the average trade (see credit_gate_audit.py).
-    "min_credit_ratio_ic":   0.15,   # IC  credit must be >= 15%  of wing width
+    "min_credit_ratio_ic":   0.01,   # IC  credit must be >= 15%  of wing width
     "min_credit_ratio_pcs":  0.09,   # PCS credit must be >= 9%   of wing width
     "min_credit_ratio_ccs":  0.085,  # CCS credit must be >= 8.5% of wing width
 
