@@ -200,11 +200,11 @@ REGIME_MAP = {
 
     # Neutral: IC when vol contracting, SKIP when expanding (legacy skip-2)
     ("neutral", "low",  "contracting"): "iron_condor",
-    ("neutral", "low",  "expanding"):   "SKIP",
+    ("neutral", "low",  "expanding"):   "iron_condor",
     ("neutral", "mid",  "contracting"): "iron_condor",
-    ("neutral", "mid",  "expanding"):   "SKIP",
+    ("neutral", "mid",  "expanding"):   "iron_condor",
     ("neutral", "high", "contracting"): "iron_condor",
-    ("neutral", "high", "expanding"):   "SKIP",
+    ("neutral", "high", "expanding"):   "iron_condor",
 
     # Bearish: CCS by default — short calls profit from decline
     ("bearish", "low",  "contracting"): "call_credit_spread",
