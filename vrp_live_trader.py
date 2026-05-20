@@ -147,7 +147,7 @@ CONFIG = {
     "panic_call_delta":    0.10, # widened short-call delta during
                                  # bearish + fresh-60d-VIX-high
     # ── Iron-condor regime-change gate (data-validated) ───────
-    "vix_rising_lookback": 5,    # IC blocked if VIX rose over this many sessions
+    "vix_rising_lookback": 30,    # IC blocked if VIX rose over this many sessions
     "ic_down_days_window": 10,   # window for the down-day count
     "ic_down_days_block":  6,    # IC blocked if >= this many down days in window
     "r":               0.04,   # risk-free rate fallback if live ^IRX fetch fails
