@@ -81,9 +81,9 @@ from alpaca.data.timeframe     import TimeFrame
 #  CONFIGURATION — edit or use environment variables
 # ══════════════════════════════════════════════════════════════
 
-API_KEY    = os.environ.get("ALPACA_API_KEY",    "YOUR_API_KEY")
-SECRET_KEY = os.environ.get("ALPACA_SECRET_KEY", "YOUR_SECRET_KEY")
-PAPER      = os.environ.get("ALPACA_PAPER", "true").lower() != "false"
+API_KEY    = "PK6PFI623NBR2EUGQM4A4FCJBT"
+SECRET_KEY = "8EJbg2DxuFCcqKX3MssbvtBR5XNQhRXVGR5VFoLAqGwK"
+PAPER      = True
 
 CONFIG = {
     # ── Portfolio allocation ──────────────────────────────────
