@@ -2103,3 +2103,37 @@
 2026-05-20 14:39:39,216  INFO  Generating portfolio equity chart...
 2026-05-20 14:39:39,534  INFO    Portfolio chart saved: diagrams/portfolio_equity.png  (value=$106,892, PnL=+$220)
 2026-05-20 14:39:39,534  INFO  Done.
+2026-05-20 15:06:16,646  INFO  ============================================================
+2026-05-20 15:06:16,646  INFO  VRP Live Trader — 2026-05-20  PAPER
+2026-05-20 15:06:16,646  INFO  ============================================================
+2026-05-20 15:06:16,741  INFO  Portfolio (last equity):   $106,891.63  (Paper)
+2026-05-20 15:06:16,741  INFO  Portfolio (live MTM):      $106,700.03  (not used for sizing — includes option bid-ask drag)
+2026-05-20 15:06:16,742  INFO  Checking for assignments...
+2026-05-20 15:06:16,755  INFO    Assignment check: no stock positions found — all clear
+2026-05-20 15:06:16,755  INFO  Computing regimes...
+2026-05-20 15:06:17,692  INFO    IWM: Trend=neutral  Vol=low  ATR=expanding  → regime_dispatched
+2026-05-20 15:06:17,692  INFO      $278.28  VIX=17.8  HV=19.2%  RSI=53.6  fresh_VIX_high=False
+2026-05-20 15:06:18,229  INFO    XLE: Trend=bullish  Vol=low  ATR=expanding  → regime_dispatched
+2026-05-20 15:06:18,229  INFO      $60.70  VIX=17.8  HV=25.8%  RSI=62.2  fresh_VIX_high=False
+2026-05-20 15:06:18,229  INFO  Managing open positions...
+2026-05-20 15:06:18,229  INFO    Slot IWM_A: no open position
+2026-05-20 15:06:18,229  INFO    Slot XLE_B: no open position
+2026-05-20 15:06:18,229  INFO    Slot IWM_C: no open position
+2026-05-20 15:06:18,229  INFO    Slot XLE_D: no open position
+2026-05-20 15:06:18,229  INFO  Checking entry opportunities...
+2026-05-20 15:06:18,229  INFO    Slot IWM_A: gated until 2026-05-21
+2026-05-20 15:06:18,229  INFO    Slot XLE_B: gated until 2026-05-25
+2026-05-20 15:06:18,230  INFO    Slot XLE_D: gated until 2026-06-08
+2026-05-20 15:06:18,230  INFO  State saved.
+2026-05-20 15:06:18,230  INFO  ------------------------------------------------------------
+2026-05-20 15:06:18,230  INFO    Slot IWM_A (IWM 17.5%): EMPTY  next: 2026-05-21
+2026-05-20 15:06:18,230  INFO    Slot XLE_B (XLE 17.5%): EMPTY  next: 2026-05-25
+2026-05-20 15:06:18,230  INFO    Slot IWM_C (IWM 17.5%): EMPTY  next: 2026-06-01
+2026-05-20 15:06:18,230  INFO    Slot XLE_D (XLE 17.5%): EMPTY  next: 2026-06-08
+2026-05-20 15:06:18,230  INFO    Portfolio: $106,892  |  Cash reserve ~20%
+2026-05-20 15:06:18,230  INFO  Generating daily live diagrams...
+2026-05-20 15:06:18,635  INFO  Failed to extract font properties from /usr/share/fonts/truetype/noto/NotoColorEmoji.ttf: Can not load face (unknown file format; error code 0x2)
+2026-05-20 15:06:18,735  INFO  generated new fontManager
+2026-05-20 15:06:18,924  INFO  Generating portfolio equity chart...
+2026-05-20 15:06:19,259  INFO    Portfolio chart saved: diagrams/portfolio_equity.png  (value=$106,892, PnL=+$220)
+2026-05-20 15:06:19,259  INFO  Done.
