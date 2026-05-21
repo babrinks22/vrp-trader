@@ -1,0 +1,34 @@
+{
+  "slots": {
+    "IWM_A": {
+      "position": null,
+      "next_entry": "2026-05-22",
+      "closed_trades": []
+    },
+    "XLE_B": {
+      "position": null,
+      "next_entry": "2026-05-28",
+      "closed_trades": []
+    },
+    "IWM_C": {
+      "position": null,
+      "next_entry": "2026-06-04",
+      "closed_trades": []
+    },
+    "XLE_D": {
+      "position": null,
+      "next_entry": "2026-06-11",
+      "closed_trades": []
+    }
+  },
+  "initial_capital": 9000.0,
+  "cumulative_pnl": 0.0,
+  "trade_count": 0,
+  "equity_history": [
+    {
+      "date": "2026-05-21",
+      "value": 9000.0
+    }
+  ],
+  "seen_assignments": []
+}
