@@ -37,3 +37,51 @@
 2026-05-21 16:28:56,468  INFO  Generating portfolio equity chart...
 2026-05-21 16:28:56,765  INFO    Portfolio chart saved: diagrams/portfolio_equity.png  (value=$9,000, PnL=+$0)
 2026-05-21 16:28:56,765  INFO  Done.
+2026-05-22 16:05:05,036  INFO  ============================================================
+2026-05-22 16:05:05,036  INFO  VRP Live Trader — 2026-05-22  LIVE
+2026-05-22 16:05:05,036  INFO  ============================================================
+2026-05-22 16:05:05,125  INFO  Portfolio (last equity):   $9,000.00  (Live)
+2026-05-22 16:05:05,125  INFO  Portfolio (live MTM):      $9,000.00  (not used for sizing — includes option bid-ask drag)
+2026-05-22 16:05:05,125  INFO  Checking for assignments...
+2026-05-22 16:05:05,161  INFO    Assignment check: no stock positions found — all clear
+2026-05-22 16:05:05,161  INFO  Computing regimes...
+2026-05-22 16:05:05,720  INFO    IWM: Trend=bullish  Vol=low  ATR=expanding  → regime_dispatched
+2026-05-22 16:05:05,720  INFO      $285.17  VIX=16.6  HV=20.4%  RSI=60.9  fresh_VIX_high=False
+2026-05-22 16:05:06,048  INFO    XLE: Trend=bullish  Vol=low  ATR=expanding  → regime_dispatched
+2026-05-22 16:05:06,048  INFO      $59.24  VIX=16.6  HV=27.7%  RSI=54.4  fresh_VIX_high=False
+2026-05-22 16:05:06,048  INFO  Managing open positions...
+2026-05-22 16:05:06,048  INFO    Slot IWM_A: no open position
+2026-05-22 16:05:06,049  INFO    Slot XLE_B: no open position
+2026-05-22 16:05:06,049  INFO    Slot IWM_C: no open position
+2026-05-22 16:05:06,049  INFO    Slot XLE_D: no open position
+2026-05-22 16:05:06,049  INFO  Checking entry opportunities...
+2026-05-22 16:05:06,062  INFO    Slot IWM_A: select_strategy → put_credit_spread  put_delta=0.20  call_delta=0.00  (RSI=60.9, vix_fresh_high=False)
+2026-05-22 16:05:06,174  INFO    Slot IWM_A: entering put_credit_spread  regime=bullish+low+expanding  rfr=3.59%  iv_est=0.241  target_expiry=2026-06-21
+2026-05-22 16:05:06,259  INFO    IV refined: HV-est=0.241 → implied=0.250 (from probe IWM260618P00271000 mid=$2.59)
+2026-05-22 16:05:06,331  INFO    Slot IWM_A: credit quality OK — $1.805/share = 9.0% of the $20.0 wing (min 9.0%)
+2026-05-22 16:05:06,363  INFO    Order submitted: 7c04992b-03ad-49a2-af7d-7eac2b14b32a  limit=$1.81  qty=1  attempt=1
+2026-05-22 16:05:21,380  WARNING    Order 7c04992b-03ad-49a2-af7d-7eac2b14b32a orderstatus.canceled
+2026-05-22 16:05:21,380  INFO    Not filled — conceding $0.05 of credit, new limit $1.76 (attempt 2/3)
+2026-05-22 16:05:21,423  INFO    Order submitted: d2daf022-77f2-42eb-854e-17747c224fdd  limit=$1.76  qty=1  attempt=2
+2026-05-22 16:05:36,438  WARNING    Order d2daf022-77f2-42eb-854e-17747c224fdd orderstatus.canceled
+2026-05-22 16:05:36,438  INFO    Not filled — conceding $0.05 of credit, new limit $1.71 (attempt 3/3)
+2026-05-22 16:05:36,468  INFO    Order submitted: b7d45689-3e63-418d-b2d5-1cfc24067149  limit=$1.71  qty=1  attempt=3
+2026-05-22 16:05:51,483  WARNING    Order b7d45689-3e63-418d-b2d5-1cfc24067149 orderstatus.canceled
+2026-05-22 16:05:51,483  ERROR    Spread order not filled after 3 attempts
+2026-05-22 16:05:51,483  WARNING    Slot IWM_A: order failed, retrying next market session
+2026-05-22 16:05:51,483  INFO    Slot XLE_B: gated until 2026-05-28
+2026-05-22 16:05:51,483  INFO    Slot IWM_C: gated until 2026-06-04
+2026-05-22 16:05:51,483  INFO    Slot XLE_D: gated until 2026-06-11
+2026-05-22 16:05:51,483  INFO  State saved.
+2026-05-22 16:05:51,483  INFO  ------------------------------------------------------------
+2026-05-22 16:05:51,483  INFO    Slot IWM_A (IWM 17.5%): EMPTY  next: 2026-05-26
+2026-05-22 16:05:51,483  INFO    Slot XLE_B (XLE 17.5%): EMPTY  next: 2026-05-28
+2026-05-22 16:05:51,484  INFO    Slot IWM_C (IWM 17.5%): EMPTY  next: 2026-06-04
+2026-05-22 16:05:51,484  INFO    Slot XLE_D (XLE 17.5%): EMPTY  next: 2026-06-11
+2026-05-22 16:05:51,484  INFO    Portfolio: $9,000  |  Cash reserve ~20%
+2026-05-22 16:05:51,484  INFO  Generating daily live diagrams...
+2026-05-22 16:05:51,831  INFO  Failed to extract font properties from /usr/share/fonts/truetype/noto/NotoColorEmoji.ttf: Can not load face (unknown file format; error code 0x2)
+2026-05-22 16:05:51,899  INFO  generated new fontManager
+2026-05-22 16:05:52,084  INFO  Generating portfolio equity chart...
+2026-05-22 16:05:52,358  INFO    Portfolio chart saved: diagrams/portfolio_equity.png  (value=$9,000, PnL=+$0)
+2026-05-22 16:05:52,358  INFO  Done.
