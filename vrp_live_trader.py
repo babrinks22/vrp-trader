@@ -1078,7 +1078,7 @@ def submit_spread(trade_client, spread_type: str, legs_info: list,
     # CREDIT_CONCESSION: we move the limit DOWN (accept less credit) to make
     # the order fill. For credit orders, a smaller limit = easier fill.
     CREDIT_CONCESSION  = CONFIG.get("limit_offset", 0.05)
-    POLL_WAIT          = 15   # seconds between fill checks
+    POLL_WAIT          = 60   # seconds between fill checks
 
     for attempt in range(MAX_RETRIES):
         try:
