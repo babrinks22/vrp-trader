@@ -1087,7 +1087,7 @@ def submit_spread(trade_client, spread_type: str, legs_info: list,
                     qty=contracts,
                     time_in_force=TimeInForce.DAY,
                     order_class=OrderClass.MLEG,
-                    limit_price=limit_price,
+                    limit_price=-limit_price,
                     legs=legs,
                 )
             )
