@@ -2,7 +2,7 @@
   "slots": {
     "IWM_A": {
       "position": null,
-      "next_entry": "2026-05-26",
+      "next_entry": "2026-05-27",
       "closed_trades": []
     },
     "XLE_B": {
@@ -35,6 +35,10 @@
     },
     {
       "date": "2026-05-25",
+      "value": 9000.0
+    },
+    {
+      "date": "2026-05-26",
       "value": 9000.0
     }
   ],
