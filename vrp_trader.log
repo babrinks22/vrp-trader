@@ -220,3 +220,51 @@
 2026-05-26 18:26:07,033  INFO  Generating portfolio equity chart...
 2026-05-26 18:26:07,324  INFO    Portfolio chart saved: diagrams/portfolio_equity.png  (value=$9,000, PnL=+$0)
 2026-05-26 18:26:07,324  INFO  Done.
+2026-05-26 18:50:46,491  INFO  ============================================================
+2026-05-26 18:50:46,491  INFO  VRP Live Trader — 2026-05-26  LIVE
+2026-05-26 18:50:46,491  INFO  ============================================================
+2026-05-26 18:50:46,586  INFO  Portfolio (last equity):   $9,000.00  (Live)
+2026-05-26 18:50:46,586  INFO  Portfolio (live MTM):      $9,000.00  (not used for sizing — includes option bid-ask drag)
+2026-05-26 18:50:46,586  INFO  Checking for assignments...
+2026-05-26 18:50:46,612  INFO    Assignment check: no stock positions found — all clear
+2026-05-26 18:50:46,612  INFO  Computing regimes...
+2026-05-26 18:50:47,346  INFO    IWM: Trend=bullish  Vol=low  ATR=expanding  → regime_dispatched
+2026-05-26 18:50:47,346  INFO      $289.71  VIX=17.0  HV=20.4%  RSI=65.3  fresh_VIX_high=False
+2026-05-26 18:50:47,582  INFO    XLE: Trend=neutral  Vol=low  ATR=contracting  → regime_dispatched
+2026-05-26 18:50:47,582  INFO      $58.03  VIX=17.0  HV=28.8%  RSI=48.0  fresh_VIX_high=False
+2026-05-26 18:50:47,582  INFO  Managing open positions...
+2026-05-26 18:50:47,582  INFO    Slot IWM_A: no open position
+2026-05-26 18:50:47,582  INFO    Slot XLE_B: no open position
+2026-05-26 18:50:47,582  INFO    Slot IWM_C: no open position
+2026-05-26 18:50:47,582  INFO    Slot XLE_D: no open position
+2026-05-26 18:50:47,583  INFO  Checking entry opportunities...
+2026-05-26 18:50:47,607  INFO    Slot IWM_A: select_strategy → put_credit_spread  put_delta=0.20  call_delta=0.00  (RSI=65.3, vix_fresh_high=False)
+2026-05-26 18:50:47,724  INFO    Slot IWM_A: entering put_credit_spread  regime=bullish+low+expanding  rfr=3.58%  iv_est=0.241  target_expiry=2026-06-25
+2026-05-26 18:50:48,918  INFO    IV refined: HV-est=0.241 → implied=0.267 (from probe IWM260626P00275000 mid=$2.98)
+2026-05-26 18:50:49,934  INFO    Slot IWM_A: credit quality OK — $1.895/share = 9.0% of the $21.0 wing (min 9.0%)
+2026-05-26 18:50:49,965  INFO    Order submitted: f087b5c5-db51-4637-bc77-6efd4f491ab8  limit=$1.89  qty=1  attempt=1
+2026-05-26 18:51:49,990  INFO    Fill confirmed (mleg avg): raw=-1.8900 → credit=$1.8900/share  (limit $1.89, slippage 0.0%)
+2026-05-26 18:51:49,990  INFO    Slot IWM_A: fill slippage $1.8950 (mid) → $1.8900 (fill)  = 0.3%
+2026-05-26 18:51:50,420  INFO  Failed to extract font properties from /usr/share/fonts/truetype/noto/NotoColorEmoji.ttf: Can not load face (unknown file format; error code 0x2)
+2026-05-26 18:51:50,424  INFO  generated new fontManager
+2026-05-26 18:51:51,234  INFO    Diagram saved: diagrams/2026-05-26_IWM_A_put_credit_spread.png
+2026-05-26 18:51:51,236  INFO    Spread logged: spread_log.csv
+2026-05-26 18:51:51,236  INFO    Slot IWM_A: opened put_credit_spread  1 contracts  credit=$1.8900 (mid $1.8950)  max_loss=$19.1100
+2026-05-26 18:51:51,236  INFO    Slot XLE_B: gated until 2026-05-28
+2026-05-26 18:51:51,236  INFO    Slot XLE_D: gated until 2026-06-11
+2026-05-26 18:51:51,237  INFO  State saved.
+2026-05-26 18:51:51,237  INFO  ------------------------------------------------------------
+2026-05-26 18:51:51,237  INFO    Slot IWM_A (IWM 17.5%): OPEN — put_credit_spread  1 contracts  DTE=31  credit=$1.89
+2026-05-26 18:51:51,237  INFO    Slot XLE_B (XLE 17.5%): EMPTY  next: 2026-05-28
+2026-05-26 18:51:51,237  INFO    Slot IWM_C (IWM 17.5%): EMPTY  next: 2026-06-04
+2026-05-26 18:51:51,237  INFO    Slot XLE_D (XLE 17.5%): EMPTY  next: 2026-06-11
+2026-05-26 18:51:51,237  INFO    Portfolio: $9,000  |  Cash reserve ~20%
+2026-05-26 18:51:51,237  INFO  Generating daily live diagrams...
+2026-05-26 18:51:52,168  WARNING    yfinance IWM attempt 1/3 failed: 'numpy.float64' object has no attribute 'dropna' — sleeping 1s
+2026-05-26 18:51:53,331  WARNING    yfinance IWM attempt 2/3 failed: 'numpy.float64' object has no attribute 'dropna' — sleeping 2s
+2026-05-26 18:51:55,418  WARNING    yfinance IWM attempt 3/3 failed: 'numpy.float64' object has no attribute 'dropna' — sleeping 4s
+2026-05-26 18:51:59,418  WARNING    using stale cache for IWM (last bar 2026-05-26)
+2026-05-26 18:51:59,901  INFO    Live diagram saved: diagrams/2026-05-26_IWM_A_live.png  (P&L $-5, -3% captured)
+2026-05-26 18:51:59,901  INFO  Generating portfolio equity chart...
+2026-05-26 18:52:00,141  INFO    Portfolio chart saved: diagrams/portfolio_equity.png  (value=$9,000, PnL=+$0)
+2026-05-26 18:52:00,142  INFO  Done.

@@ -1,0 +1,2 @@
+date,slot,spread,trend_regime,vol_regime,atr_regime,underlying_px,net_credit,max_loss,contracts,expiry,hv_est,iv_refined,diagram_file,legs
+2026-05-26,IWM_A,put_credit_spread,bullish,low,expanding,289.71,1.89,19.11,1,2026-06-26,0.204,0.2667,diagrams/2026-05-26_IWM_A_put_credit_spread.png,S put $273 | L put $253

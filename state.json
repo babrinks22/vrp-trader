@@ -1,8 +1,33 @@
 {
   "slots": {
     "IWM_A": {
-      "position": null,
-      "next_entry": "2026-05-26",
+      "position": {
+        "entry_date": "2026-05-26",
+        "expiry": "2026-06-26",
+        "spread": "put_credit_spread",
+        "trend_regime": "bullish",
+        "vol_regime": "low",
+        "atr_regime": "expanding",
+        "contracts": 1,
+        "credit_received": 1.89,
+        "credit_mid": 1.895,
+        "max_loss": 19.11,
+        "leg_symbols": [
+          "IWM260626P00273000",
+          "IWM260626P00253000"
+        ],
+        "leg_sides": [
+          true,
+          false
+        ],
+        "order_id": "f087b5c5-db51-4637-bc77-6efd4f491ab8",
+        "underlying_px": 289.7099914550781,
+        "rsi_at_entry": 65.33186690985347,
+        "vix_fresh_high": false,
+        "call_delta": 0.0,
+        "put_delta": 0.2
+      },
+      "next_entry": null,
       "closed_trades": []
     },
     "XLE_B": {
