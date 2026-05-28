@@ -302,3 +302,44 @@
 2026-05-27 16:51:26,672  INFO  Generating portfolio equity chart...
 2026-05-27 16:51:26,944  INFO    Portfolio chart saved: diagrams/portfolio_equity.png  (value=$8,994, PnL=$-6)
 2026-05-27 16:51:26,944  INFO  Done.
+2026-05-28 17:28:04,511  INFO  ============================================================
+2026-05-28 17:28:04,511  INFO  VRP Live Trader — 2026-05-28  LIVE
+2026-05-28 17:28:04,511  INFO  ============================================================
+2026-05-28 17:28:04,581  INFO  Portfolio (last equity):   $9,025.87  (Live)
+2026-05-28 17:28:04,581  INFO  Portfolio (live MTM):      $9,044.87  (not used for sizing — includes option bid-ask drag)
+2026-05-28 17:28:04,582  INFO  Checking for assignments...
+2026-05-28 17:28:04,593  INFO    Assignment check: no stock positions found — all clear
+2026-05-28 17:28:04,593  INFO  Computing regimes...
+2026-05-28 17:28:05,024  INFO    IWM: Trend=bullish  Vol=low  ATR=contracting  → regime_dispatched
+2026-05-28 17:28:05,024  INFO      $291.88  VIX=15.9  HV=19.2%  RSI=67.2  fresh_VIX_high=False
+2026-05-28 17:28:05,265  INFO    XLE: Trend=neutral  Vol=low  ATR=contracting  → regime_dispatched
+2026-05-28 17:28:05,265  INFO      $57.06  VIX=15.9  HV=28.0%  RSI=43.9  fresh_VIX_high=False
+2026-05-28 17:28:05,265  INFO  Managing open positions...
+2026-05-28 17:28:05,265  INFO    Slot IWM_A: put_credit_spread  DTE=29  held=2d  credit=$1.89
+2026-05-28 17:28:05,265  INFO    Slot XLE_B: no open position
+2026-05-28 17:28:05,265  INFO    Slot IWM_C: no open position
+2026-05-28 17:28:05,265  INFO    Slot XLE_D: no open position
+2026-05-28 17:28:05,265  INFO  Checking entry opportunities...
+2026-05-28 17:28:05,345  INFO    Slot XLE_B: select_strategy → iron_condor  put_delta=0.20  call_delta=0.20  (RSI=43.9, vix_fresh_high=False)
+2026-05-28 17:28:05,441  INFO    Slot XLE_B: entering iron_condor  regime=neutral+low+contracting  rfr=3.59%  iv_est=0.330  target_expiry=2026-06-27
+2026-05-28 17:28:05,607  INFO    find_contract: skipped XLE260626P00053000 (wide spread) → picked XLE260626P00053500 (spread 11% ≤ 30%)
+2026-05-28 17:28:05,609  INFO    IV refined: HV-est=0.330 → implied=0.275 (from probe XLE260626P00053500 mid=$0.47)
+2026-05-28 17:28:06,161  WARNING    find_contract: no contract near $49 passed bid-ask filter (max 30%) — using fallback XLE260626P00049000 anyway (bid=0.00 ask=1.50)
+2026-05-28 17:28:06,254  INFO    find_contract: skipped XLE260626C00061500 (wide spread) → picked XLE260626C00061000 (spread 21% ≤ 30%)
+2026-05-28 17:28:06,454  WARNING    find_contract: no contract near $66 passed bid-ask filter (max 30%) — using fallback XLE260626C00066000 anyway (bid=0.01 ask=2.22)
+2026-05-28 17:28:06,455  WARNING    Slot XLE_B: zero/negative credit $-0.17 — likely inverted strike snap on thin options chain. Skipping.
+2026-05-28 17:28:06,455  INFO    Slot XLE_D: gated until 2026-06-11
+2026-05-28 17:28:06,455  INFO  State saved.
+2026-05-28 17:28:06,455  INFO  ------------------------------------------------------------
+2026-05-28 17:28:06,455  INFO    Slot IWM_A (IWM 17.5%): OPEN — put_credit_spread  1 contracts  DTE=29  credit=$1.89
+2026-05-28 17:28:06,455  INFO    Slot XLE_B (XLE 17.5%): EMPTY  next: 2026-05-29
+2026-05-28 17:28:06,455  INFO    Slot IWM_C (IWM 17.5%): EMPTY  next: 2026-06-04
+2026-05-28 17:28:06,456  INFO    Slot XLE_D (XLE 17.5%): EMPTY  next: 2026-06-11
+2026-05-28 17:28:06,456  INFO    Portfolio: $9,026  |  Cash reserve ~20%
+2026-05-28 17:28:06,456  INFO  Generating daily live diagrams...
+2026-05-28 17:28:06,744  INFO  Failed to extract font properties from /usr/share/fonts/truetype/noto/NotoColorEmoji.ttf: Can not load face (unknown file format; error code 0x2)
+2026-05-28 17:28:06,755  INFO  generated new fontManager
+2026-05-28 17:28:07,618  INFO    Live diagram saved: diagrams/2026-05-28_IWM_A_live.png  (P&L +$49, 26% captured)
+2026-05-28 17:28:07,619  INFO  Generating portfolio equity chart...
+2026-05-28 17:28:07,900  INFO    Portfolio chart saved: diagrams/portfolio_equity.png  (value=$9,026, PnL=+$26)
+2026-05-28 17:28:07,900  INFO  Done.
