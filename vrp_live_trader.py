@@ -805,7 +805,10 @@ def _fetch_history(symbol: str, lookback_days: int,
                               auto_adjust=True, progress=False)
             if raw is None or raw.empty:
                 raise RuntimeError("empty result")
-            new_series = raw["Close"].squeeze().dropna()
+            close = raw["Close"]
+            if isinstance(close, pd.DataFrame):       # MultiIndex columns case
+                close = close.iloc[:, 0]
+            new_series = pd.Series(close.values.ravel(), index=close.index).dropna()
             new_series.index = pd.to_datetime(new_series.index)
             break
         except Exception as e:
