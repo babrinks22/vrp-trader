@@ -32,7 +32,7 @@
     },
     "XLE_B": {
       "position": null,
-      "next_entry": "2026-06-01",
+      "next_entry": "2026-06-02",
       "closed_trades": []
     },
     "IWM_C": {
@@ -77,6 +77,10 @@
     {
       "date": "2026-05-29",
       "value": 9058.87
+    },
+    {
+      "date": "2026-06-01",
+      "value": 9052.87
     }
   ],
   "seen_assignments": []
