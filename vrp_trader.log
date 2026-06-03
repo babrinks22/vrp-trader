@@ -496,3 +496,57 @@
 2026-06-02 17:54:46,072  INFO  Generating portfolio equity chart...
 2026-06-02 17:54:46,343  INFO    Portfolio chart saved: diagrams/portfolio_equity.png  (value=$9,047, PnL=+$47)
 2026-06-02 17:54:46,343  INFO  Done.
+2026-06-03 18:11:56,374  INFO  ============================================================
+2026-06-03 18:11:56,374  INFO  VRP Live Trader — 2026-06-03  LIVE
+2026-06-03 18:11:56,374  INFO  ============================================================
+2026-06-03 18:11:56,432  INFO  Portfolio (last equity):   $9,066.87  (Live)
+2026-06-03 18:11:56,432  INFO  Portfolio (live MTM):      $9,025.87  (not used for sizing — includes option bid-ask drag)
+2026-06-03 18:11:56,432  INFO  Checking for assignments...
+2026-06-03 18:11:56,443  INFO    Assignment check: no stock positions found — all clear
+2026-06-03 18:11:56,443  INFO  Computing regimes...
+2026-06-03 18:11:56,537  ERROR  
+1 Failed download:
+2026-06-03 18:11:56,538  ERROR  ['IWM']: YFRateLimitError('Too Many Requests. Rate limited. Try after a while.')
+2026-06-03 18:11:56,546  WARNING    yfinance IWM attempt 1/3 failed: empty result — sleeping 1s
+2026-06-03 18:11:57,851  INFO    IWM: Trend=bullish  Vol=low  ATR=contracting  → regime_dispatched
+2026-06-03 18:11:57,851  INFO      $288.01  VIX=16.0  HV=18.8%  RSI=58.1  fresh_VIX_high=False
+2026-06-03 18:11:58,102  INFO    XLE: Trend=bullish  Vol=low  ATR=contracting  → regime_dispatched
+2026-06-03 18:11:58,102  INFO      $58.88  VIX=16.0  HV=25.1%  RSI=54.0  fresh_VIX_high=False
+2026-06-03 18:11:58,102  INFO  Managing open positions...
+2026-06-03 18:11:58,102  INFO    Slot IWM_A: put_credit_spread  DTE=23  held=8d  credit=$1.89
+2026-06-03 18:11:58,146  INFO    Slot XLE_B: no open position
+2026-06-03 18:11:58,146  INFO    Slot IWM_C: no open position
+2026-06-03 18:11:58,146  INFO    Slot XLE_D: no open position
+2026-06-03 18:11:58,147  INFO  Checking entry opportunities...
+2026-06-03 18:11:58,157  INFO    Slot XLE_B: select_strategy → put_credit_spread  put_delta=0.20  call_delta=0.00  (RSI=54.0, vix_fresh_high=False)
+2026-06-03 18:11:58,324  INFO    Slot XLE_B: entering put_credit_spread  regime=bullish+low+contracting  rfr=3.62%  iv_est=0.296  target_expiry=2026-07-03
+2026-06-03 18:11:58,350  INFO    IV refined: HV-est=0.296 → implied=0.267 (from probe XLE260630P00055000 mid=$0.41)
+2026-06-03 18:11:58,473  WARNING    find_contract: no contract near $51 passed bid-ask filter (max 30%) — using fallback XLE260702P00051000 anyway (bid=0.00 ask=0.19)
+2026-06-03 18:11:58,473  INFO    Slot XLE_B: credit quality OK — $0.540/share = 10.8% of the $5.0 wing (min 9.0%)
+2026-06-03 18:11:58,498  INFO    Order submitted: 179e9c97-c562-48cc-9c0a-e79323091201  limit=$0.54  qty=3  attempt=1
+2026-06-03 18:12:58,508  INFO    Order 179e9c97-c562-48cc-9c0a-e79323091201 status=orderstatus.new (poll 1/3, waiting 60s...)
+2026-06-03 18:13:58,518  INFO    Order 179e9c97-c562-48cc-9c0a-e79323091201 status=orderstatus.new (poll 2/3, waiting 60s...)
+2026-06-03 18:14:58,528  INFO    Order 179e9c97-c562-48cc-9c0a-e79323091201 status=orderstatus.new (poll 3/3, waiting 60s...)
+2026-06-03 18:14:58,528  INFO    Not filled — conceding $0.05 of credit, new limit $0.49 (attempt 2/3)
+2026-06-03 18:14:58,554  INFO    Order submitted: f884a2af-aa77-4431-b3dc-2745378cb684  limit=$0.49  qty=3  attempt=2
+2026-06-03 18:15:58,563  INFO    Fill confirmed (mleg avg): raw=-0.5000 → credit=$0.5000/share  (limit $0.49, slippage -2.0%)
+2026-06-03 18:15:58,563  INFO    Slot XLE_B: fill slippage $0.5400 (mid) → $0.5000 (fill)  = 7.4%
+2026-06-03 18:15:59,621  INFO  Failed to extract font properties from /usr/share/fonts/truetype/noto/NotoColorEmoji.ttf: Can not load face (unknown file format; error code 0x2)
+2026-06-03 18:15:59,734  INFO  generated new fontManager
+2026-06-03 18:16:00,701  INFO    Diagram saved: diagrams/2026-06-03_XLE_B_put_credit_spread.png
+2026-06-03 18:16:00,704  INFO    Spread logged: spread_log.csv
+2026-06-03 18:16:00,704  INFO    Slot XLE_B: opened put_credit_spread  3 contracts  credit=$0.5000 (mid $0.5400)  max_loss=$4.5000
+2026-06-03 18:16:00,704  INFO    Slot IWM_C: gated until 2026-06-04
+2026-06-03 18:16:00,705  INFO  State saved.
+2026-06-03 18:16:00,705  INFO  ------------------------------------------------------------
+2026-06-03 18:16:00,705  INFO    Slot IWM_A (IWM 17.5%): OPEN — put_credit_spread  1 contracts  DTE=23  credit=$1.89
+2026-06-03 18:16:00,705  INFO    Slot XLE_B (XLE 17.5%): OPEN — put_credit_spread  3 contracts  DTE=29  credit=$0.50
+2026-06-03 18:16:00,705  INFO    Slot IWM_C (IWM 17.5%): EMPTY  next: 2026-06-04
+2026-06-03 18:16:00,705  INFO    Slot XLE_D (XLE 17.5%): EMPTY  next: 2026-06-11
+2026-06-03 18:16:00,705  INFO    Portfolio: $9,067  |  Cash reserve ~20%
+2026-06-03 18:16:00,705  INFO  Generating daily live diagrams...
+2026-06-03 18:16:01,528  INFO    Live diagram saved: diagrams/2026-06-03_IWM_A_live.png  (P&L +$29, 15% captured)
+2026-06-03 18:16:02,353  INFO    Live diagram saved: diagrams/2026-06-03_XLE_B_live.png  (P&L $-2, -1% captured)
+2026-06-03 18:16:02,353  INFO  Generating portfolio equity chart...
+2026-06-03 18:16:02,676  INFO    Portfolio chart saved: diagrams/portfolio_equity.png  (value=$9,067, PnL=+$67)
+2026-06-03 18:16:02,676  INFO  Done.

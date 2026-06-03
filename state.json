@@ -31,8 +31,33 @@
       "closed_trades": []
     },
     "XLE_B": {
-      "position": null,
-      "next_entry": "2026-06-03",
+      "position": {
+        "entry_date": "2026-06-03",
+        "expiry": "2026-07-02",
+        "spread": "put_credit_spread",
+        "trend_regime": "bullish",
+        "vol_regime": "low",
+        "atr_regime": "contracting",
+        "contracts": 3,
+        "credit_received": 0.5,
+        "credit_mid": 0.54,
+        "max_loss": 4.5,
+        "leg_symbols": [
+          "XLE260702P00055500",
+          "XLE260702P00051000"
+        ],
+        "leg_sides": [
+          true,
+          false
+        ],
+        "order_id": "f884a2af-aa77-4431-b3dc-2745378cb684",
+        "underlying_px": 58.880001068115234,
+        "rsi_at_entry": 54.031283772763665,
+        "vix_fresh_high": false,
+        "call_delta": 0.0,
+        "put_delta": 0.2
+      },
+      "next_entry": null,
       "closed_trades": []
     },
     "IWM_C": {
@@ -85,6 +110,10 @@
     {
       "date": "2026-06-02",
       "value": 9046.87
+    },
+    {
+      "date": "2026-06-03",
+      "value": 9066.87
     }
   ],
   "seen_assignments": []
