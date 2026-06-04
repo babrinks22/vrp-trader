@@ -1,3 +1,4 @@
 date,action,slot,spread,trend,vol,atr,contracts,credit,credit_mid,max_loss,underlying_px,slippage_pct,close_reason,realized_pnl,entry_date,days_held,order_id
 2026-05-26,open,IWM_A,put_credit_spread,bullish,low,expanding,1,1.89,1.895,19.11,289.71,0.3,,,,,f087b5c5-db51-4637-bc77-6efd4f491ab8
 2026-06-03,open,XLE_B,put_credit_spread,bullish,low,contracting,3,0.5,0.54,4.5,58.88,7.4,,,,,f884a2af-aa77-4431-b3dc-2745378cb684
+2026-06-04,open,IWM_C,put_credit_spread,bullish,low,expanding,1,1.8,1.795,17.2,290.99,-0.3,,,,,094a39c0-563e-4537-9de6-9c630a5051bf
