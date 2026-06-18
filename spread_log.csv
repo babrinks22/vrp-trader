@@ -2,3 +2,4 @@ date,slot,spread,trend_regime,vol_regime,atr_regime,underlying_px,net_credit,max
 2026-05-26,IWM_A,put_credit_spread,bullish,low,expanding,289.71,1.89,19.11,1,2026-06-26,0.204,0.2667,diagrams/2026-05-26_IWM_A_put_credit_spread.png,S put $273 | L put $253
 2026-06-03,XLE_B,put_credit_spread,bullish,low,contracting,58.88,0.5,4.5,3,2026-07-02,0.2509,0.2673,diagrams/2026-06-03_XLE_B_put_credit_spread.png,S put $56 | L put $51
 2026-06-04,IWM_C,put_credit_spread,bullish,low,expanding,290.99,1.8,17.2,1,2026-07-02,0.1832,0.2418,diagrams/2026-06-04_IWM_C_put_credit_spread.png,S put $276 | L put $257
+2026-06-18,IWM_A,put_credit_spread,bullish,low,contracting,294.08,1.81,18.19,1,2026-07-17,0.2236,0.2485,diagrams/2026-06-18_IWM_A_put_credit_spread.png,S put $279 | L put $259

@@ -1,8 +1,33 @@
 {
   "slots": {
     "IWM_A": {
-      "position": null,
-      "next_entry": "2026-06-18",
+      "position": {
+        "entry_date": "2026-06-18",
+        "expiry": "2026-07-17",
+        "spread": "put_credit_spread",
+        "trend_regime": "bullish",
+        "vol_regime": "low",
+        "atr_regime": "contracting",
+        "contracts": 1,
+        "credit_received": 1.81,
+        "credit_mid": 1.86,
+        "max_loss": 18.19,
+        "leg_symbols": [
+          "IWM260717P00279000",
+          "IWM260717P00259000"
+        ],
+        "leg_sides": [
+          true,
+          false
+        ],
+        "order_id": "2556ec91-f5da-4e42-9beb-a5b5c453af9f",
+        "underlying_px": 294.0799865722656,
+        "rsi_at_entry": 59.589414819187965,
+        "vix_fresh_high": false,
+        "call_delta": 0.0,
+        "put_delta": 0.2
+      },
+      "next_entry": null,
       "closed_trades": [
         {
           "entry_date": "2026-05-26",
@@ -66,44 +91,49 @@
       "closed_trades": []
     },
     "IWM_C": {
-      "position": {
-        "entry_date": "2026-06-04",
-        "expiry": "2026-07-02",
-        "spread": "put_credit_spread",
-        "trend_regime": "bullish",
-        "vol_regime": "low",
-        "atr_regime": "expanding",
-        "contracts": 1,
-        "credit_received": 1.8,
-        "credit_mid": 1.795,
-        "max_loss": 17.2,
-        "leg_symbols": [
-          "IWM260702P00276000",
-          "IWM260702P00257000"
-        ],
-        "leg_sides": [
-          true,
-          false
-        ],
-        "order_id": "094a39c0-563e-4537-9de6-9c630a5051bf",
-        "underlying_px": 290.989990234375,
-        "rsi_at_entry": 61.31367358633125,
-        "vix_fresh_high": false,
-        "call_delta": 0.0,
-        "put_delta": 0.2
-      },
-      "next_entry": null,
-      "closed_trades": []
+      "position": null,
+      "next_entry": "2026-06-25",
+      "closed_trades": [
+        {
+          "entry_date": "2026-06-04",
+          "expiry": "2026-07-02",
+          "spread": "put_credit_spread",
+          "trend_regime": "bullish",
+          "vol_regime": "low",
+          "atr_regime": "expanding",
+          "contracts": 1,
+          "credit_received": 1.8,
+          "credit_mid": 1.795,
+          "max_loss": 17.2,
+          "leg_symbols": [
+            "IWM260702P00276000",
+            "IWM260702P00257000"
+          ],
+          "leg_sides": [
+            true,
+            false
+          ],
+          "order_id": "094a39c0-563e-4537-9de6-9c630a5051bf",
+          "underlying_px": 290.989990234375,
+          "rsi_at_entry": 61.31367358633125,
+          "vix_fresh_high": false,
+          "call_delta": 0.0,
+          "put_delta": 0.2,
+          "close_date": "2026-06-18",
+          "close_reason": "profit_target",
+          "realized_pnl": 117.5
+        }
+      ]
     },
     "XLE_D": {
       "position": null,
-      "next_entry": "2026-06-18",
+      "next_entry": "2026-06-22",
       "closed_trades": []
     }
   },
   "initial_capital": 9000.0,
-  "cumulative_pnl": 155.5,
-  "trade_count": 1,
+  "cumulative_pnl": 273.0,
+  "trade_count": 2,
   "equity_history": [
     {
       "date": "2026-05-21",
@@ -184,6 +214,10 @@
     {
       "date": "2026-06-17",
       "value": 9033.26
+    },
+    {
+      "date": "2026-06-18",
+      "value": 8969.26
     }
   ],
   "seen_assignments": []

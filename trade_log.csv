@@ -3,3 +3,5 @@ date,action,slot,spread,trend,vol,atr,contracts,credit,credit_mid,max_loss,under
 2026-06-03,open,XLE_B,put_credit_spread,bullish,low,contracting,3,0.5,0.54,4.5,58.88,7.4,,,,,f884a2af-aa77-4431-b3dc-2745378cb684
 2026-06-04,open,IWM_C,put_credit_spread,bullish,low,expanding,1,1.8,1.795,17.2,290.99,-0.3,,,,,094a39c0-563e-4537-9de6-9c630a5051bf
 2026-06-15,close,IWM_A,put_credit_spread,bullish,low,expanding,1,1.89,,19.11,,,profit_target,155.5,2026-05-26,20,f087b5c5-db51-4637-bc77-6efd4f491ab8
+2026-06-18,close,IWM_C,put_credit_spread,bullish,low,expanding,1,1.8,,17.2,,,profit_target,117.5,2026-06-04,14,094a39c0-563e-4537-9de6-9c630a5051bf
+2026-06-18,open,IWM_A,put_credit_spread,bullish,low,contracting,1,1.81,1.86,18.19,294.08,2.7,,,,,2556ec91-f5da-4e42-9beb-a5b5c453af9f
