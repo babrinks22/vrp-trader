@@ -1058,3 +1058,37 @@
 2026-06-22 18:06:44,551  INFO  Generating portfolio equity chart...
 2026-06-22 18:06:44,873  INFO    Portfolio chart saved: diagrams/portfolio_equity.png  (value=$8,776, PnL=$-224)
 2026-06-22 18:06:44,873  INFO  Done.
+2026-06-23 16:13:50,294  INFO  ============================================================
+2026-06-23 16:13:50,294  INFO  VRP Live Trader — 2026-06-23  LIVE
+2026-06-23 16:13:50,294  INFO  ============================================================
+2026-06-23 16:13:50,351  INFO  Portfolio (last equity):   $8,983.01  (Live)
+2026-06-23 16:13:50,351  INFO  Portfolio (live MTM):      $8,937.01  (not used for sizing — includes option bid-ask drag)
+2026-06-23 16:13:50,351  INFO  Checking for assignments...
+2026-06-23 16:13:50,362  INFO    Assignment check: no stock positions found — all clear
+2026-06-23 16:13:50,362  INFO  Computing regimes...
+2026-06-23 16:13:50,832  INFO    IWM: Trend=bullish  Vol=mid  ATR=contracting  → regime_dispatched
+2026-06-23 16:13:50,832  INFO      $297.69  VIX=19.4  HV=22.8%  RSI=62.4  fresh_VIX_high=False
+2026-06-23 16:13:51,135  INFO    XLE: Trend=bearish  Vol=mid  ATR=contracting  → regime_dispatched
+2026-06-23 16:13:51,136  INFO      $54.28  VIX=19.4  HV=24.9%  RSI=39.0  fresh_VIX_high=False
+2026-06-23 16:13:51,136  INFO  Managing open positions...
+2026-06-23 16:13:51,136  INFO    Slot IWM_A: put_credit_spread  DTE=24  held=5d  credit=$1.81
+2026-06-23 16:13:51,195  INFO    Slot XLE_B: put_credit_spread  DTE=9  held=20d  credit=$0.50
+2026-06-23 16:13:51,205  INFO    Slot IWM_C: no open position
+2026-06-23 16:13:51,205  INFO    Slot XLE_D: no open position
+2026-06-23 16:13:51,205  INFO  Checking entry opportunities...
+2026-06-23 16:13:51,220  INFO    Slot XLE_D: SKIP — RSI 39.0 < 43 (V-bottom risk on CCS).  Holding cash, will retry tomorrow.
+2026-06-23 16:13:51,221  INFO  State saved.
+2026-06-23 16:13:51,221  INFO  ------------------------------------------------------------
+2026-06-23 16:13:51,221  INFO    Slot IWM_A (IWM 17.5%): OPEN — put_credit_spread  1 contracts  DTE=24  credit=$1.81
+2026-06-23 16:13:51,221  INFO    Slot XLE_B (XLE 17.5%): OPEN — put_credit_spread  3 contracts  DTE=9  credit=$0.50
+2026-06-23 16:13:51,221  INFO    Slot IWM_C (IWM 17.5%): EMPTY  next: 2026-06-25
+2026-06-23 16:13:51,221  INFO    Slot XLE_D (XLE 17.5%): EMPTY  next: 2026-06-24
+2026-06-23 16:13:51,221  INFO    Portfolio: $8,983  |  Cash reserve ~20%
+2026-06-23 16:13:51,222  INFO  Generating daily live diagrams...
+2026-06-23 16:13:51,540  INFO  Failed to extract font properties from /usr/share/fonts/truetype/noto/NotoColorEmoji.ttf: Non-scalable fonts are not supported
+2026-06-23 16:13:51,620  INFO  generated new fontManager
+2026-06-23 16:13:52,764  INFO    Live diagram saved: diagrams/2026-06-23_IWM_A_live.png  (P&L +$38, 21% captured)
+2026-06-23 16:13:53,605  INFO    Live diagram saved: diagrams/2026-06-23_XLE_B_live.png  (P&L $-301, -201% captured)
+2026-06-23 16:13:53,605  INFO  Generating portfolio equity chart...
+2026-06-23 16:13:53,962  INFO    Portfolio chart saved: diagrams/portfolio_equity.png  (value=$8,983, PnL=$-17)
+2026-06-23 16:13:53,963  INFO  Done.
