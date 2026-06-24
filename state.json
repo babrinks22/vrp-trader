@@ -127,7 +127,7 @@
     },
     "XLE_D": {
       "position": null,
-      "next_entry": "2026-06-24",
+      "next_entry": "2026-06-25",
       "closed_trades": []
     }
   },
@@ -230,6 +230,10 @@
     {
       "date": "2026-06-23",
       "value": 8983.01
+    },
+    {
+      "date": "2026-06-24",
+      "value": 9043.01
     }
   ],
   "seen_assignments": []
