@@ -1250,3 +1250,47 @@
 2026-06-29 16:46:47,778  INFO  Generating portfolio equity chart...
 2026-06-29 16:46:48,131  INFO    Portfolio chart saved: diagrams/portfolio_equity.png  (value=$8,977, PnL=$-23)
 2026-06-29 16:46:48,131  INFO  Done.
+2026-06-30 16:10:46,147  INFO  ============================================================
+2026-06-30 16:10:46,147  INFO  VRP Live Trader — 2026-06-30  LIVE
+2026-06-30 16:10:46,147  INFO  ============================================================
+2026-06-30 16:10:46,418  INFO  Portfolio (last equity):   $9,031.85  (Live)
+2026-06-30 16:10:46,418  INFO  Portfolio (live MTM):      $9,047.85  (not used for sizing — includes option bid-ask drag)
+2026-06-30 16:10:46,418  INFO  Checking for assignments...
+2026-06-30 16:10:46,493  INFO    Assignment check: no stock positions found — all clear
+2026-06-30 16:10:46,494  INFO  Computing regimes...
+2026-06-30 16:10:47,698  INFO    IWM: Trend=bullish  Vol=low  ATR=contracting  → regime_dispatched
+2026-06-30 16:10:47,698  INFO      $299.88  VIX=16.8  HV=22.2%  RSI=62.8  fresh_VIX_high=False
+2026-06-30 16:10:47,954  INFO    XLE: Trend=bearish  Vol=low  ATR=contracting  → regime_dispatched
+2026-06-30 16:10:47,954  INFO      $53.80  VIX=16.8  HV=22.7%  RSI=39.3  fresh_VIX_high=False
+2026-06-30 16:10:47,954  INFO  Managing open positions...
+2026-06-30 16:10:47,954  INFO    Slot IWM_A: put_credit_spread  DTE=17  held=12d  credit=$1.81
+2026-06-30 16:10:48,548  INFO    Slot IWM_A: profit target  profit=$1.22 >= target=$1.18
+2026-06-30 16:10:48,807  INFO    Close order submitted: 04fa4aae-d37c-40da-8887-520dbd6de763  debit limit=$0.59  qty=1  attempt=1/3
+2026-06-30 16:11:03,883  INFO    Close filled: debit $0.5800/share  (mid was $0.59, slippage -1.7%)
+2026-06-30 16:11:03,883  INFO    MLEG limit close succeeded — 2 legs
+2026-06-30 16:11:03,883  INFO    All 2/2 legs closed/expired successfully.
+2026-06-30 16:11:03,884  INFO    Closed: profit_target  P&L=$121.50  |  cumulative=$76.50  trades=4
+2026-06-30 16:11:03,884  INFO    Slot XLE_B: no open position
+2026-06-30 16:11:03,884  INFO    Slot IWM_C: no open position
+2026-06-30 16:11:03,884  INFO    Slot XLE_D: no open position
+2026-06-30 16:11:03,884  INFO  Checking entry opportunities...
+2026-06-30 16:11:03,884  INFO    Slot IWM_A: gated until 2026-07-01
+2026-06-30 16:11:03,984  INFO    Slot XLE_B: SKIP — RSI 39.3 < 43 (V-bottom risk on CCS).  Holding cash, will retry tomorrow.
+2026-06-30 16:11:04,077  INFO    Slot IWM_C: select_strategy → put_credit_spread  put_delta=0.20  call_delta=0.00  (RSI=62.8, vix_fresh_high=False)
+2026-06-30 16:11:04,223  INFO    Slot IWM_C: entering put_credit_spread  regime=bullish+low+contracting  rfr=3.74%  iv_est=0.262  target_expiry=2026-07-30
+2026-06-30 16:11:04,410  INFO    IV refined: HV-est=0.262 → implied=0.246 (from probe IWM260731P00283000 mid=$2.20)
+2026-06-30 16:11:04,752  INFO    Slot IWM_C: credit $1.715 is only 8.6% of the $20.0 wing — below the 9.0% minimum for put_credit_spread. Skipping — retry tomorrow.
+2026-06-30 16:11:04,826  INFO    Slot XLE_D: SKIP — RSI 39.3 < 43 (V-bottom risk on CCS).  Holding cash, will retry tomorrow.
+2026-06-30 16:11:04,827  INFO  State saved.
+2026-06-30 16:11:04,827  INFO  ------------------------------------------------------------
+2026-06-30 16:11:04,827  INFO    Slot IWM_A (IWM 17.5%): EMPTY  next: 2026-07-01
+2026-06-30 16:11:04,827  INFO    Slot XLE_B (XLE 17.5%): EMPTY  next: 2026-07-01
+2026-06-30 16:11:04,827  INFO    Slot IWM_C (IWM 17.5%): EMPTY  next: 2026-07-01
+2026-06-30 16:11:04,827  INFO    Slot XLE_D (XLE 17.5%): EMPTY  next: 2026-07-01
+2026-06-30 16:11:04,827  INFO    Portfolio: $9,032  |  Cash reserve ~20%
+2026-06-30 16:11:04,827  INFO  Generating daily live diagrams...
+2026-06-30 16:11:05,137  INFO  Failed to extract font properties from /usr/share/fonts/truetype/noto/NotoColorEmoji.ttf: Non-scalable fonts are not supported
+2026-06-30 16:11:05,228  INFO  generated new fontManager
+2026-06-30 16:11:05,389  INFO  Generating portfolio equity chart...
+2026-06-30 16:11:05,642  INFO    Portfolio chart saved: diagrams/portfolio_equity.png  (value=$9,032, PnL=+$32)
+2026-06-30 16:11:05,643  INFO  Done.
