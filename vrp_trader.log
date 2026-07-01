@@ -1294,3 +1294,44 @@
 2026-06-30 16:11:05,389  INFO  Generating portfolio equity chart...
 2026-06-30 16:11:05,642  INFO    Portfolio chart saved: diagrams/portfolio_equity.png  (value=$9,032, PnL=+$32)
 2026-06-30 16:11:05,643  INFO  Done.
+2026-07-01 16:09:43,275  INFO  ============================================================
+2026-07-01 16:09:43,275  INFO  VRP Live Trader — 2026-07-01  LIVE
+2026-07-01 16:09:43,275  INFO  ============================================================
+2026-07-01 16:09:43,350  INFO  Portfolio (last equity):   $9,064.71  (Live)
+2026-07-01 16:09:43,350  INFO  Portfolio (live MTM):      $9,046.71  (not used for sizing — includes option bid-ask drag)
+2026-07-01 16:09:43,350  INFO  Checking for assignments...
+2026-07-01 16:09:43,359  INFO    Assignment check: no stock positions found — all clear
+2026-07-01 16:09:43,359  INFO  Computing regimes...
+2026-07-01 16:09:43,788  INFO    IWM: Trend=bullish  Vol=low  ATR=contracting  → regime_dispatched
+2026-07-01 16:09:43,788  INFO      $302.20  VIX=16.1  HV=22.1%  RSI=65.2  fresh_VIX_high=False
+2026-07-01 16:09:44,066  INFO    XLE: Trend=bearish  Vol=low  ATR=contracting  → regime_dispatched
+2026-07-01 16:09:44,066  INFO      $53.06  VIX=16.1  HV=21.9%  RSI=35.7  fresh_VIX_high=False
+2026-07-01 16:09:44,066  INFO  Managing open positions...
+2026-07-01 16:09:44,067  INFO    Slot IWM_A: no open position
+2026-07-01 16:09:44,067  INFO    Slot XLE_B: no open position
+2026-07-01 16:09:44,067  INFO    Slot IWM_C: no open position
+2026-07-01 16:09:44,067  INFO    Slot XLE_D: no open position
+2026-07-01 16:09:44,067  INFO  Checking entry opportunities...
+2026-07-01 16:09:44,076  INFO    Slot IWM_A: select_strategy → put_credit_spread  put_delta=0.20  call_delta=0.00  (RSI=65.2, vix_fresh_high=False)
+2026-07-01 16:09:44,166  INFO    Slot IWM_A: entering put_credit_spread  regime=bullish+low+contracting  rfr=3.72%  iv_est=0.260  target_expiry=2026-07-31
+2026-07-01 16:09:44,239  INFO    IV refined: HV-est=0.260 → implied=0.230 (from probe IWM260731P00285000 mid=$1.81)
+2026-07-01 16:09:44,405  INFO    Slot IWM_A: credit $1.650 is only 8.7% of the $19.0 wing — below the 9.0% minimum for put_credit_spread. Skipping — retry tomorrow.
+2026-07-01 16:09:44,416  INFO    Slot XLE_B: SKIP — RSI 35.7 < 43 (V-bottom risk on CCS).  Holding cash, will retry tomorrow.
+2026-07-01 16:09:44,428  INFO    Slot IWM_C: select_strategy → put_credit_spread  put_delta=0.20  call_delta=0.00  (RSI=65.2, vix_fresh_high=False)
+2026-07-01 16:09:44,428  INFO    Slot IWM_C: entering put_credit_spread  regime=bullish+low+contracting  rfr=3.72%  iv_est=0.260  target_expiry=2026-07-31
+2026-07-01 16:09:44,465  INFO    IV refined: HV-est=0.260 → implied=0.230 (from probe IWM260731P00285000 mid=$1.81)
+2026-07-01 16:09:44,536  INFO    Slot IWM_C: credit $1.650 is only 8.7% of the $19.0 wing — below the 9.0% minimum for put_credit_spread. Skipping — retry tomorrow.
+2026-07-01 16:09:44,545  INFO    Slot XLE_D: SKIP — RSI 35.7 < 43 (V-bottom risk on CCS).  Holding cash, will retry tomorrow.
+2026-07-01 16:09:44,546  INFO  State saved.
+2026-07-01 16:09:44,546  INFO  ------------------------------------------------------------
+2026-07-01 16:09:44,546  INFO    Slot IWM_A (IWM 17.5%): EMPTY  next: 2026-07-02
+2026-07-01 16:09:44,546  INFO    Slot XLE_B (XLE 17.5%): EMPTY  next: 2026-07-02
+2026-07-01 16:09:44,546  INFO    Slot IWM_C (IWM 17.5%): EMPTY  next: 2026-07-02
+2026-07-01 16:09:44,546  INFO    Slot XLE_D (XLE 17.5%): EMPTY  next: 2026-07-02
+2026-07-01 16:09:44,546  INFO    Portfolio: $9,065  |  Cash reserve ~20%
+2026-07-01 16:09:44,546  INFO  Generating daily live diagrams...
+2026-07-01 16:09:44,960  INFO  Failed to extract font properties from /usr/share/fonts/truetype/noto/NotoColorEmoji.ttf: Non-scalable fonts are not supported
+2026-07-01 16:09:45,048  INFO  generated new fontManager
+2026-07-01 16:09:45,252  INFO  Generating portfolio equity chart...
+2026-07-01 16:09:45,579  INFO    Portfolio chart saved: diagrams/portfolio_equity.png  (value=$9,065, PnL=+$65)
+2026-07-01 16:09:45,579  INFO  Done.
