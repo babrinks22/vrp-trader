@@ -1452,3 +1452,46 @@
 2026-07-06 16:44:18,435  INFO  Generating portfolio equity chart...
 2026-07-06 16:44:18,761  INFO    Portfolio chart saved: diagrams/portfolio_equity.png  (value=$9,047, PnL=+$47)
 2026-07-06 16:44:18,761  INFO  Done.
+2026-07-07 16:10:12,976  INFO  ============================================================
+2026-07-07 16:10:12,976  INFO  VRP Live Trader — 2026-07-07  LIVE
+2026-07-07 16:10:12,977  INFO  ============================================================
+2026-07-07 16:10:13,048  INFO  Portfolio (last equity):   $9,046.71  (Live)
+2026-07-07 16:10:13,048  INFO  Portfolio (live MTM):      $9,046.71  (not used for sizing — includes option bid-ask drag)
+2026-07-07 16:10:13,049  INFO  Checking for assignments...
+2026-07-07 16:10:13,060  INFO    Assignment check: no stock positions found — all clear
+2026-07-07 16:10:13,060  INFO  Computing regimes...
+2026-07-07 16:10:13,610  INFO    IWM: Trend=neutral  Vol=low  ATR=contracting  → regime_dispatched
+2026-07-07 16:10:13,610  INFO      $296.88  VIX=16.2  HV=16.1%  RSI=56.4  fresh_VIX_high=False
+2026-07-07 16:10:13,878  INFO    XLE: Trend=neutral  Vol=low  ATR=contracting  → regime_dispatched
+2026-07-07 16:10:13,878  INFO      $53.92  VIX=16.2  HV=21.8%  RSI=43.3  fresh_VIX_high=False
+2026-07-07 16:10:13,878  INFO  Managing open positions...
+2026-07-07 16:10:13,879  INFO    Slot IWM_A: no open position
+2026-07-07 16:10:13,879  INFO    Slot XLE_B: no open position
+2026-07-07 16:10:13,879  INFO    Slot IWM_C: no open position
+2026-07-07 16:10:13,879  INFO    Slot XLE_D: no open position
+2026-07-07 16:10:13,879  INFO  Checking entry opportunities...
+2026-07-07 16:10:13,891  INFO    Slot IWM_A: select_strategy → iron_condor  put_delta=0.20  call_delta=0.20  (RSI=56.4, vix_fresh_high=False)
+2026-07-07 16:10:14,005  INFO    Slot IWM_A: entering iron_condor  regime=neutral+low+contracting  rfr=3.72%  iv_est=0.190  target_expiry=2026-08-06
+2026-07-07 16:10:14,195  INFO    IV refined: HV-est=0.190 → implied=0.232 (from probe IWM260807P00285000 mid=$2.94)
+2026-07-07 16:10:14,402  INFO    find_contract: skipped IWM260807C00335000 (wide spread) → picked IWM260807C00330000 (spread 19% ≤ 30%)
+2026-07-07 16:10:14,402  INFO    Slot IWM_A: credit $2.650 is only 13.9% of the $19.0 wing — below the 15.0% minimum for iron_condor. Skipping — retry tomorrow.
+2026-07-07 16:10:14,414  INFO    Slot XLE_B: SKIP — IC blocked: 6 down days in last 10 (confirmed short-term downtrend).  Holding cash, will retry tomorrow.
+2026-07-07 16:10:14,425  INFO    Slot IWM_C: select_strategy → iron_condor  put_delta=0.20  call_delta=0.20  (RSI=56.4, vix_fresh_high=False)
+2026-07-07 16:10:14,425  INFO    Slot IWM_C: entering iron_condor  regime=neutral+low+contracting  rfr=3.72%  iv_est=0.190  target_expiry=2026-08-06
+2026-07-07 16:10:14,476  INFO    IV refined: HV-est=0.190 → implied=0.232 (from probe IWM260807P00285000 mid=$2.94)
+2026-07-07 16:10:14,692  INFO    find_contract: skipped IWM260807C00335000 (wide spread) → picked IWM260807C00330000 (spread 19% ≤ 30%)
+2026-07-07 16:10:14,692  INFO    Slot IWM_C: credit $2.645 is only 13.9% of the $19.0 wing — below the 15.0% minimum for iron_condor. Skipping — retry tomorrow.
+2026-07-07 16:10:14,705  INFO    Slot XLE_D: SKIP — IC blocked: 6 down days in last 10 (confirmed short-term downtrend).  Holding cash, will retry tomorrow.
+2026-07-07 16:10:14,706  INFO  State saved.
+2026-07-07 16:10:14,706  INFO  ------------------------------------------------------------
+2026-07-07 16:10:14,706  INFO    Slot IWM_A (IWM 17.5%): EMPTY  next: 2026-07-08
+2026-07-07 16:10:14,707  INFO    Slot XLE_B (XLE 17.5%): EMPTY  next: 2026-07-08
+2026-07-07 16:10:14,707  INFO    Slot IWM_C (IWM 17.5%): EMPTY  next: 2026-07-08
+2026-07-07 16:10:14,707  INFO    Slot XLE_D (XLE 17.5%): EMPTY  next: 2026-07-08
+2026-07-07 16:10:14,707  INFO    Portfolio: $9,047  |  Cash reserve ~20%
+2026-07-07 16:10:14,707  INFO  Generating daily live diagrams...
+2026-07-07 16:10:15,729  INFO  Failed to extract font properties from /usr/share/fonts/truetype/noto/NotoColorEmoji.ttf: Non-scalable fonts are not supported
+2026-07-07 16:10:16,099  INFO  generated new fontManager
+2026-07-07 16:10:16,309  INFO  Generating portfolio equity chart...
+2026-07-07 16:10:16,656  INFO    Portfolio chart saved: diagrams/portfolio_equity.png  (value=$9,047, PnL=+$47)
+2026-07-07 16:10:16,656  INFO  Done.
