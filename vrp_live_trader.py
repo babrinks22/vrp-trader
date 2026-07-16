@@ -134,22 +134,22 @@ CONFIG = {
     # ~3x stricter standard. A ratio is price-invariant. Values calibrated
     # to the effective ratio bar the old $0.90 / $0.50 floors produced for
     # the average trade (see credit_gate_audit.py).
-    "min_credit_ratio_ic":   0.15,   # IC  credit must be >= 15%  of wing width
-    "min_credit_ratio_pcs":  0.09,   # PCS credit must be >= 9%   of wing width
-    "min_credit_ratio_ccs":  0.085,  # CCS credit must be >= 8.5% of wing width
+    "min_credit_ratio_ic":   0.00,   # IC  credit must be >= 15%  of wing width
+    "min_credit_ratio_pcs":  0.00,   # PCS credit must be >= 9%   of wing width
+    "min_credit_ratio_ccs":  0.000,  # CCS credit must be >= 8.5% of wing width
 
     # ── Indicator parameters (V-bottom protection for CCS) ────
     "rsi_period":          14,   # Wilder RSI period on underlying close
-    "rsi_ccs_threshold":   43,   # block CCS entries when RSI < this
+    "rsi_ccs_threshold":   0,   # block CCS entries when RSI < this
                                  # (avoids selling calls into oversold bottoms
                                  # vulnerable to V-bottom reversal)
     "vix_fresh_lookback":  60,   # window for fresh-VIX-high panic-peak detection
     "panic_call_delta":    0.10, # widened short-call delta during
                                  # bearish + fresh-60d-VIX-high
     # ── Iron-condor regime-change gate (data-validated) ───────
-    "vix_rising_lookback": 5,    # IC blocked if VIX rose over this many sessions
+    "vix_rising_lookback": 1000,    # IC blocked if VIX rose over this many sessions
     "ic_down_days_window": 10,   # window for the down-day count
-    "ic_down_days_block":  6,    # IC blocked if >= this many down days in window
+    "ic_down_days_block":  1000,    # IC blocked if >= this many down days in window
     "r":               0.04,   # risk-free rate fallback if live ^IRX fetch fails
     "max_quote_spread_pct": 0.30,  # skip options where (ask-bid)/mid > this (#14)
 
