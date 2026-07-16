@@ -1,8 +1,37 @@
 {
   "slots": {
     "IWM_A": {
-      "position": null,
-      "next_entry": "2026-07-16",
+      "position": {
+        "entry_date": "2026-07-16",
+        "expiry": "2026-08-14",
+        "spread": "iron_condor",
+        "trend_regime": "neutral",
+        "vol_regime": "low",
+        "atr_regime": "contracting",
+        "contracts": 1,
+        "credit_received": 2.51,
+        "credit_mid": 2.56,
+        "max_loss": 14.49,
+        "leg_symbols": [
+          "IWM260814P00284000",
+          "IWM260814P00265000",
+          "IWM260814C00313000",
+          "IWM260814C00330000"
+        ],
+        "leg_sides": [
+          true,
+          false,
+          true,
+          false
+        ],
+        "order_id": "7ebe42bf-f617-4491-a738-a7e69953f6c2",
+        "underlying_px": 296.760009765625,
+        "rsi_at_entry": 55.04548709590876,
+        "vix_fresh_high": false,
+        "call_delta": 0.2,
+        "put_delta": 0.2
+      },
+      "next_entry": null,
       "closed_trades": [
         {
           "entry_date": "2026-05-26",
@@ -66,7 +95,7 @@
     },
     "XLE_B": {
       "position": null,
-      "next_entry": "2026-07-16",
+      "next_entry": "2026-07-17",
       "closed_trades": [
         {
           "entry_date": "2026-06-03",
@@ -101,7 +130,7 @@
     },
     "IWM_C": {
       "position": null,
-      "next_entry": "2026-07-16",
+      "next_entry": "2026-07-23",
       "closed_trades": [
         {
           "entry_date": "2026-06-04",
@@ -136,7 +165,7 @@
     },
     "XLE_D": {
       "position": null,
-      "next_entry": "2026-07-16",
+      "next_entry": "2026-07-17",
       "closed_trades": []
     }
   },
@@ -302,6 +331,10 @@
     },
     {
       "date": "2026-07-15",
+      "value": 9046.71
+    },
+    {
+      "date": "2026-07-16",
       "value": 9046.71
     }
   ],
