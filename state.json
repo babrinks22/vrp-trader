@@ -95,7 +95,7 @@
     },
     "XLE_B": {
       "position": null,
-      "next_entry": "2026-07-17",
+      "next_entry": "2026-07-20",
       "closed_trades": [
         {
           "entry_date": "2026-06-03",
@@ -165,7 +165,7 @@
     },
     "XLE_D": {
       "position": null,
-      "next_entry": "2026-07-17",
+      "next_entry": "2026-07-20",
       "closed_trades": []
     }
   },
@@ -336,6 +336,10 @@
     {
       "date": "2026-07-16",
       "value": 9046.71
+    },
+    {
+      "date": "2026-07-17",
+      "value": 9024.5
     }
   ],
   "seen_assignments": []

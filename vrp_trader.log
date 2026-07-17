@@ -1763,3 +1763,37 @@
 2026-07-16 15:24:42,022  INFO  Generating portfolio equity chart...
 2026-07-16 15:24:42,445  INFO    Portfolio chart saved: diagrams/portfolio_equity.png  (value=$9,047, PnL=+$47)
 2026-07-16 15:24:42,446  INFO  Done.
+2026-07-17 15:00:52,811  INFO  ============================================================
+2026-07-17 15:00:52,811  INFO  VRP Live Trader — 2026-07-17  LIVE
+2026-07-17 15:00:52,811  INFO  ============================================================
+2026-07-17 15:00:53,038  INFO  Portfolio (last equity):   $9,024.50  (Live)
+2026-07-17 15:00:53,038  INFO  Portfolio (live MTM):      $9,016.50  (not used for sizing — includes option bid-ask drag)
+2026-07-17 15:00:53,038  INFO  Checking for assignments...
+2026-07-17 15:00:53,099  INFO    Assignment check: no stock positions found — all clear
+2026-07-17 15:00:53,099  INFO  Computing regimes...
+2026-07-17 15:00:54,902  INFO    IWM: Trend=neutral  Vol=low  ATR=contracting  → regime_dispatched
+2026-07-17 15:00:54,902  INFO      $294.44  VIX=18.2  HV=12.6%  RSI=51.1  fresh_VIX_high=False
+2026-07-17 15:00:55,710  INFO    XLE: Trend=neutral  Vol=low  ATR=expanding  → regime_dispatched
+2026-07-17 15:00:55,710  INFO      $57.49  VIX=18.2  HV=21.0%  RSI=61.0  fresh_VIX_high=False
+2026-07-17 15:00:55,710  INFO  Managing open positions...
+2026-07-17 15:00:55,710  INFO    Slot IWM_A: iron_condor  DTE=28  held=1d  credit=$2.51
+2026-07-17 15:00:55,710  INFO    Slot XLE_B: no open position
+2026-07-17 15:00:55,710  INFO    Slot IWM_C: no open position
+2026-07-17 15:00:55,710  INFO    Slot XLE_D: no open position
+2026-07-17 15:00:55,710  INFO  Checking entry opportunities...
+2026-07-17 15:00:55,770  INFO    Slot XLE_B: SKIP — regime ('neutral', 'low', 'expanding') is a designated no-trade (SKIP) regime — holding cash by design.  Holding cash, will retry tomorrow.
+2026-07-17 15:00:55,832  INFO    Slot XLE_D: SKIP — regime ('neutral', 'low', 'expanding') is a designated no-trade (SKIP) regime — holding cash by design.  Holding cash, will retry tomorrow.
+2026-07-17 15:00:55,833  INFO  State saved.
+2026-07-17 15:00:55,833  INFO  ------------------------------------------------------------
+2026-07-17 15:00:55,833  INFO    Slot IWM_A (IWM 17.5%): OPEN — iron_condor  1 contracts  DTE=28  credit=$2.51
+2026-07-17 15:00:55,833  INFO    Slot XLE_B (XLE 17.5%): EMPTY  next: 2026-07-20
+2026-07-17 15:00:55,833  INFO    Slot IWM_C (IWM 17.5%): EMPTY  next: 2026-07-23
+2026-07-17 15:00:55,833  INFO    Slot XLE_D (XLE 17.5%): EMPTY  next: 2026-07-20
+2026-07-17 15:00:55,833  INFO    Portfolio: $9,024  |  Cash reserve ~20%
+2026-07-17 15:00:55,833  INFO  Generating daily live diagrams...
+2026-07-17 15:00:56,147  INFO  Failed to extract font properties from /usr/share/fonts/truetype/noto/NotoColorEmoji.ttf: Non-scalable fonts are not supported
+2026-07-17 15:00:56,171  INFO  generated new fontManager
+2026-07-17 15:00:57,478  INFO    Live diagram saved: diagrams/2026-07-17_IWM_A_live.png  (P&L $-24, -9% captured)
+2026-07-17 15:00:57,479  INFO  Generating portfolio equity chart...
+2026-07-17 15:00:57,744  INFO    Portfolio chart saved: diagrams/portfolio_equity.png  (value=$9,024, PnL=+$24)
+2026-07-17 15:00:57,745  INFO  Done.
