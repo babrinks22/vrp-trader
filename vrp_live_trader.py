@@ -111,6 +111,12 @@ CONFIG = {
     # plateau on both IWM/XLE and the unrelated ETFs, and is the most
     # sub-period-consistent pair tested. 20/50 ranked far lower on both.
     # Keep 14/40 for all future versions. See etf_validate.py / trend_sweep.py.
+    #
+    # NOTE (regime map disabled — see select_strategy()): these trend/vol/
+    # ATR signals are still computed each run (useful for logging/
+    # diagnostics) but are no longer used to pick the spread type. Kept
+    # so get_regime()'s output shape doesn't change and nothing else
+    # downstream breaks.
     "trend_fast":      14,     # SMA fast period
     "trend_slow":      40,     # SMA slow period
     "hv_lookback":     20,     # historical vol lookback
@@ -134,11 +140,21 @@ CONFIG = {
     # ~3x stricter standard. A ratio is price-invariant. Values calibrated
     # to the effective ratio bar the old $0.90 / $0.50 floors produced for
     # the average trade (see credit_gate_audit.py).
-    "min_credit_ratio_ic":   0.00,   # IC  credit must be >= 15%  of wing width
+    #
+    # UPDATED: min_credit_ratio_ic raised from 0.00 -> 0.15. Backtest across
+    # 2003-2026 (vrp_backtest.py, model-priced — see that script's header
+    # for methodology/caveats) showed a 15% IC credit-to-wing floor combined
+    # with dropping the regime map and the XLE sleeve outperformed the prior
+    # 0%-floor / regime-mapped / IWM+XLE config: 28.6% CAGR vs 21.4%, Sharpe
+    # 1.02 vs 0.70, over the full 2003-2026 window.
+    "min_credit_ratio_ic":   0.15,   # IC  credit must be >= 15%  of wing width
     "min_credit_ratio_pcs":  0.00,   # PCS credit must be >= 9%   of wing width
     "min_credit_ratio_ccs":  0.000,  # CCS credit must be >= 8.5% of wing width
 
     # ── Indicator parameters (V-bottom protection for CCS) ────
+    # NOTE: dead code with the regime map disabled — CCS is never selected
+    # (see select_strategy()). Left in place only so get_regime() and the
+    # daily log lines that reference RSI/VIX-fresh-high keep working.
     "rsi_period":          14,   # Wilder RSI period on underlying close
     "rsi_ccs_threshold":   0,   # block CCS entries when RSI < this
                                  # (avoids selling calls into oversold bottoms
@@ -147,6 +163,8 @@ CONFIG = {
     "panic_call_delta":    0.10, # widened short-call delta during
                                  # bearish + fresh-60d-VIX-high
     # ── Iron-condor regime-change gate (data-validated) ───────
+    # NOTE: also unused now — select_strategy() no longer calls the
+    # vix_rising / down_days gate. Left in place for reference.
     "vix_rising_lookback": 1000,    # IC blocked if VIX rose over this many sessions
     "ic_down_days_window": 10,   # window for the down-day count
     "ic_down_days_block":  1000,    # IC blocked if >= this many down days in window
@@ -165,22 +183,19 @@ CONFIG = {
 
 
 # ══════════════════════════════════════════════════════════════
-#  REGIME / SPREAD CONFIG  (regime-mapped — see PATCH discussion)
+#  REGIME / SPREAD CONFIG  — REGIME MAP DISABLED
 # ══════════════════════════════════════════════════════════════
 #
-# Strategy:
-#   - IC  in neutral regimes with stable/falling vol  → premium harvest
-#   - PCS in bullish regimes                          → directional vol selling
-#   - CCS in bearish regimes (with RSI gate)          → crash protection
-#   - SKIP in neutral + expanding vol                 → uncertain direction
+# select_strategy() below no longer consults REGIME_MAP: every entry is
+# a plain iron condor (put_delta = call_delta = 0.20), regardless of
+# trend/vol/ATR regime, RSI, VIX-rising, or down-day count. REGIME_MAP
+# and SPREAD_PARAMS are kept only as reference / in case of a future
+# rollback — they are not read anywhere at runtime anymore.
 #
-# Refinements baked in:
-#   - CCS requires RSI(14) ≥ rsi_ccs_threshold (avoids V-bottom reversals)
-#   - In bearish + fresh-60d-VIX-high: short call delta = panic_call_delta
-#     (V-spike protection via wider call wing)
-#
-# Out-of-sample sweep verified the 43-45 RSI threshold plateau is real
-# signal (see backtest_v5). 43 chosen as conservative edge of plateau.
+# Backtest rationale (vrp_backtest.py, model-priced, 2003-2026):
+# always-iron-condor + no regime map/skips beat the regime-mapped
+# PCS/CCS/SKIP version in every metric tested (CAGR, Sharpe, trade
+# count efficiency). See CONFIG comment above min_credit_ratio_ic.
 
 SPREAD_PARAMS = {
     "iron_condor":        {"put_delta": 0.20, "call_delta": 0.20, "put_width_mult": 1.0},
@@ -189,6 +204,7 @@ SPREAD_PARAMS = {
 }
 
 # Regime → spread map. (trend, vol_level, atr_direction) → spread or "SKIP".
+# NOT CONSULTED ANYMORE — see note above. Kept for reference only.
 REGIME_MAP = {
     # Bullish: PCS by default — call side most likely to be tested in uptrends
     ("bullish", "low",  "contracting"): "put_credit_spread",
@@ -243,9 +259,9 @@ def load_state() -> dict:
     return {
         "slots": {
             "IWM_A": {"position": None, "next_entry": None, "closed_trades": []},
-            "XLE_B": {"position": None, "next_entry": None, "closed_trades": []},
+            "IWM_B": {"position": None, "next_entry": None, "closed_trades": []},
             "IWM_C": {"position": None, "next_entry": None, "closed_trades": []},
-            "XLE_D": {"position": None, "next_entry": None, "closed_trades": []},
+            "IWM_D": {"position": None, "next_entry": None, "closed_trades": []},
         },
         "initial_capital": None,
         "cumulative_pnl":  0.0,
@@ -640,11 +656,8 @@ def is_vix_rising(vix_series: pd.Series, lookback: int = 5) -> bool:
     """
     True if VIX has risen over the last `lookback` trading sessions.
 
-    Used as an iron-condor entry gate. Backtest + out-of-sample analysis
-    (2008-2016 real data) showed IC trades entered while VIX was rising had a
-    ~68% win rate vs ~96-100% when VIX was falling/flat. Rising VIX signals
-    stress building before it is fully priced into IV, so the IC wings are
-    more likely to be breached. See indicator_analysis.py for the study.
+    NOTE: no longer used by select_strategy() (regime map disabled) — kept
+    for diagnostics/logging only.
     """
     if len(vix_series) < lookback + 1:
         return False
@@ -659,11 +672,8 @@ def count_down_days(price_series: pd.Series, lookback: int = 10) -> int:
     """
     Count negative-return sessions in the last `lookback` trading days.
 
-    Used as a secondary iron-condor entry gate. When 6+ of the last 10
-    sessions were down, the market is in a confirmed short-term downtrend
-    that the SMA-based regime classifier can miss (it may still read
-    "neutral" during a trend pause). Backtest showed IC win rate of ~75%
-    when down_days >= 6 vs ~87% otherwise.
+    NOTE: no longer used by select_strategy() (regime map disabled) — kept
+    for diagnostics/logging only.
     """
     if len(price_series) < lookback + 1:
         return 0
@@ -676,79 +686,27 @@ def select_strategy(regime: dict, vix_fresh_high: bool,
                     vix_rising: bool = False,
                     down_days: int = 0) -> dict:
     """
-    Map a regime + indicator state to a concrete strategy decision.
+    REGIME MAP DISABLED.
 
-    Returns a dict with keys:
-      spread       : "iron_condor" | "put_credit_spread" | "call_credit_spread" | None
-      put_delta    : target delta for short put leg (0 if no put side)
-      call_delta   : target delta for short call leg (0 if no call side)
-      skip_reason  : None if entering, else a short string explaining the skip
+    Always trades a plain iron condor (put_delta = call_delta = 0.20).
+    No REGIME_MAP lookup, no SKIP cells, no RSI/CCS gate, no VIX-rising or
+    down-day IC gate, no panic-widened call delta. The regime dict, RSI,
+    VIX-rising, and down-day arguments are accepted for backwards
+    compatibility with the call site in enter_slot() but are ignored.
 
-    Inputs:
-      regime          : dict from get_regime() — needs 'trend', 'vol', 'atr'
-      vix_fresh_high  : bool from is_vix_fresh_high()
-      rsi_today       : float in [0, 100]
-      cfg             : optional config override (defaults to CONFIG)
-      vix_rising      : bool from is_vix_rising() — IC entry gate
-      down_days       : int from count_down_days() — IC entry gate
+    Why: a 2003-2026 backtest (vrp_backtest.py — model-priced Black-Scholes
+    backtest, see that script's header for methodology and caveats) showed
+    this simplified always-IC rule outperformed the regime-mapped PCS/CCS/
+    SKIP version on every metric tested (CAGR 28.6% vs 21.4%, Sharpe 1.02
+    vs 0.70, smaller max drawdown in the proposed-vs-live head-to-head run).
+
+    To roll back to the regime-mapped behavior: restore the REGIME_MAP
+    lookup + gating logic that lived here (still present, unused, above —
+    see REGIME_MAP / SPREAD_PARAMS and the CONFIG comments for the values
+    that were in force before this change).
     """
-    cfg = cfg or CONFIG
-    regime_key = (regime["trend"], regime["vol"], regime["atr"])
-    spread = REGIME_MAP.get(regime_key)   # None if the regime is genuinely absent
-
-    if spread is None:
-        # The regime tuple is NOT a key in REGIME_MAP at all. This is not a
-        # normal no-trade cell — it usually means an 'unknown' regime (data
-        # warmup or a data problem) or a genuine gap in the map. Flag it
-        # distinctly so it is not mistaken for a deliberate SKIP.
-        return {"spread": None, "put_delta": 0.0, "call_delta": 0.0,
-                "skip_reason": f"regime {regime_key} NOT RECOGNISED — not a key "
-                               f"in REGIME_MAP (likely an 'unknown' regime from "
-                               f"data warmup, or a map gap — worth a look)"}
-
-    if spread == "SKIP":
-        # The regime IS in the map and is a designated no-trade cell. This is
-        # intended, normal behaviour (e.g. neutral trend + expanding range).
-        return {"spread": None, "put_delta": 0.0, "call_delta": 0.0,
-                "skip_reason": f"regime {regime_key} is a designated no-trade "
-                               f"(SKIP) regime — holding cash by design"}
-
-    # V-bottom gate: CCS requires RSI to have recovered from oversold zone
-    if spread == "call_credit_spread" and rsi_today < cfg["rsi_ccs_threshold"]:
-        return {"spread": None, "put_delta": 0.0, "call_delta": 0.0,
-                "skip_reason": f"RSI {rsi_today:.1f} < {cfg['rsi_ccs_threshold']} "
-                               f"(V-bottom risk on CCS)"}
-
-    # ── Iron-condor regime-change gate ───────────────────────────
-    # ICs are the strategy's most fragile structure during regime change:
-    # both wings are exposed, so a directional break loses on one side
-    # with no offsetting gain. Two indicators of "regime breaking" block
-    # IC entry (data-validated, see indicator_analysis.py):
-    #   - VIX rising over the last 5 sessions
-    #   - 6+ of the last 10 sessions were down
-    # When either fires, hold cash rather than sell a fragile IC.
-    if spread == "iron_condor":
-        if vix_rising:
-            return {"spread": None, "put_delta": 0.0, "call_delta": 0.0,
-                    "skip_reason": "IC blocked: VIX rising over last 5 sessions "
-                                   "(regime-change risk)"}
-        if down_days >= cfg["ic_down_days_block"]:
-            return {"spread": None, "put_delta": 0.0, "call_delta": 0.0,
-                    "skip_reason": f"IC blocked: {down_days} down days in last 10 "
-                                   f"(confirmed short-term downtrend)"}
-
-    params = SPREAD_PARAMS[spread]
-    put_delta  = params["put_delta"]
-    call_delta = params["call_delta"]
-
-    # Panic-peak: widen short call when bearish + fresh-60d VIX high
-    # (call_delta=0.10 instead of 0.20 — roughly 2× further OTM for V-spike cushion)
-    if (regime["trend"] == "bearish" and vix_fresh_high
-            and call_delta > 0):
-        call_delta = cfg["panic_call_delta"]
-
-    return {"spread": spread, "put_delta": put_delta,
-            "call_delta": call_delta, "skip_reason": None}
+    return {"spread": "iron_condor", "put_delta": 0.20, "call_delta": 0.20,
+            "skip_reason": None}
 
 
 # ══════════════════════════════════════════════════════════════
@@ -897,11 +855,12 @@ def get_regime(cfg: dict, ticker: str = "IWM") -> dict:
 
     # ── Spread selection ─────────────────────────────────────────
     # No longer hardcoded. The returned regime dict is consumed by
-    # select_strategy() in enter_slot, which maps to IC/PCS/CCS/SKIP
-    # based on REGIME_MAP plus the RSI and fresh-VIX-high gates.
+    # select_strategy() in enter_slot, which (as of this version) always
+    # returns a plain iron condor regardless of trend/vol/atr — see
+    # select_strategy() docstring.
     spread = "regime_dispatched"   # placeholder; actual choice in select_strategy
 
-    # ── Indicator values for strategy selection ─────────────────
+    # ── Indicator values (diagnostics only now — see select_strategy) ──
     rsi_today = compute_rsi(px, cfg["rsi_period"])
     vix_fresh = is_vix_fresh_high(vix, cfg["vix_fresh_lookback"])
     vix_rising = is_vix_rising(vix, cfg["vix_rising_lookback"])
@@ -922,8 +881,8 @@ def get_regime(cfg: dict, ticker: str = "IWM") -> dict:
                                          # actual skip handled by select_strategy()
         "rsi":            rsi_today,
         "vix_fresh_high": vix_fresh,
-        "vix_rising":     vix_rising,    # IC entry gate
-        "down_days":      down_days,     # IC entry gate
+        "vix_rising":     vix_rising,    # diagnostics only now
+        "down_days":      down_days,     # diagnostics only now
     }
 
 
@@ -1574,10 +1533,8 @@ def close_position_by_legs(trade_client, opt_data_client,
 # IWM activates at ~$1.4M portfolio  (500K daily vol × 0.1%).
 # This only activates at very large portfolio sizes — a safety rail against
 # bugs, not a growth limiter for normal account sizes.
-# Other tickers can be added here if the portfolio ever expands beyond IWM.
 MARKET_IMPACT_CAP = {
     "IWM":  500,   # 0.1% of ~500K daily options volume
-    "XLE":  300,   # 0.1% of ~300K daily options volume on XLE (less liquid than IWM)
 }
 DEFAULT_CONTRACT_CAP = 50
 
@@ -1608,121 +1565,6 @@ def compute_contracts(portfolio_value: float, max_loss_per_spread: float,
     n      = int(budget / (max_loss_per_spread * 100))
     cap    = MARKET_IMPACT_CAP.get(ticker, DEFAULT_CONTRACT_CAP)
     return max(1, min(n, cap))
-
-
-# ══════════════════════════════════════════════════════════════
-#  (SPY allocation manager removed — portfolio is 100% IWM options)
-# ══════════════════════════════════════════════════════════════
-    """
-    Ensure ~60% of portfolio is in SPY.
-    On first run: buys the initial SPY position.
-    Subsequent runs: rebalances if >5% off target.
-    """
-    target_value = portfolio_value * 0.60   # legacy reference, function is no-op
-
-    # Always read actual SPY shares from Alpaca — never trust state.json alone.
-    # Prevents double-buying when state.json is stale between runs.
-    try:
-        positions = trade_client.get_all_positions()
-        actual_shares = 0.0
-        for pos in positions:
-            if pos.symbol == "SPY":
-                actual_shares = float(pos.qty)
-                break
-        state["spy_shares"] = actual_shares
-        log.info(f"  SPY actual shares from Alpaca: {actual_shares:.0f}")
-    except Exception as e:
-        log.warning(f"  Could not read SPY position from Alpaca: {e}")
-        actual_shares = state.get("spy_shares", 0.0)
-
-    current_shares = actual_shares
-
-    # Get current SPY price — try quote first, fall back to last daily bar
-    spy_price = 0.0
-    try:
-        quote = data_client.get_stock_latest_quote(
-            StockLatestQuoteRequest(symbol_or_symbols=["SPY"])
-        )
-        ask = float(quote["SPY"].ask_price)
-        bid = float(quote["SPY"].bid_price)
-        spy_price = ask if ask > 0 else bid
-    except Exception:
-        pass
-
-    if spy_price <= 0:
-        # Market closed — use last daily bar close
-        try:
-            from alpaca.data.requests import StockBarsRequest
-            from alpaca.data.timeframe import TimeFrame
-            bars = data_client.get_stock_bars(
-                StockBarsRequest(
-                    symbol_or_symbols=["SPY"],
-                    timeframe=TimeFrame.Day,
-                    limit=1,
-                )
-            )
-            spy_price = float(bars["SPY"][-1].close)
-        except Exception as e:
-            log.error(f"Could not get SPY price from bars: {e}")
-            return
-
-    if spy_price <= 0:
-        log.error("SPY price is still zero after fallback, skipping allocation")
-        return
-
-    current_value = current_shares * spy_price
-
-    if current_shares == 0:
-        # First run — buy initial SPY position
-        shares_to_buy = int(target_value / spy_price)
-        if shares_to_buy < 1:
-            log.warning("Portfolio too small to buy even 1 SPY share")
-            return
-        try:
-            order = trade_client.submit_order(
-                MarketOrderRequest(
-                    symbol="SPY",
-                    qty=shares_to_buy,
-                    side=OrderSide.BUY,
-                    time_in_force=TimeInForce.DAY,
-                )
-            )
-            state["spy_shares"] = shares_to_buy
-            log.info(f"  SPY initial buy: {shares_to_buy} shares @ ~${spy_price:.2f}")
-        except Exception as e:
-            log.error(f"  SPY buy failed: {e}")
-    else:
-        # Rebalance check — only if >5% off target
-        drift = abs(current_value - target_value) / target_value
-        if drift > 0.05:
-            target_shares = int(target_value / spy_price)
-            delta_shares  = target_shares - int(current_shares)
-            if delta_shares > 0:
-                try:
-                    trade_client.submit_order(
-                        MarketOrderRequest(
-                            symbol="SPY", qty=delta_shares,
-                            side=OrderSide.BUY,
-                            time_in_force=TimeInForce.DAY,
-                        )
-                    )
-                    state["spy_shares"] += delta_shares
-                    log.info(f"  SPY rebalance: bought {delta_shares} shares")
-                except Exception as e:
-                    log.error(f"  SPY rebalance failed: {e}")
-            elif delta_shares < 0:
-                try:
-                    trade_client.submit_order(
-                        MarketOrderRequest(
-                            symbol="SPY", qty=abs(delta_shares),
-                            side=OrderSide.SELL,
-                            time_in_force=TimeInForce.DAY,
-                        )
-                    )
-                    state["spy_shares"] += delta_shares
-                    log.info(f"  SPY rebalance: sold {abs(delta_shares)} shares")
-                except Exception as e:
-                    log.error(f"  SPY rebalance failed: {e}")
 
 
 # ══════════════════════════════════════════════════════════════
@@ -2522,7 +2364,7 @@ def enter_slot(trade_client, opt_data_client, slot_id: str,
                cfg_override: dict = None) -> dict:
     """
     Open a new options position in this slot based on current regime.
-    ticker: underlying ETF (IWM or XBI)
+    ticker: underlying ETF (IWM only, as of the regime-map-disabled version)
     cfg_override: allows per-slot risk_pct to differ from CONFIG
     """
     cfg = cfg_override if cfg_override else CONFIG
@@ -2544,7 +2386,7 @@ def enter_slot(trade_client, opt_data_client, slot_id: str,
         open_positions = trade_client.get_all_positions()
         ticker_legs = sum(1 for p in open_positions
                          if p.symbol.startswith(ticker) and len(p.symbol) > len(ticker))
-        max_legs = 8   # 2 slots × 4 legs per condor
+        max_legs = 16   # 4 slots × 4 legs per condor
         if ticker_legs >= max_legs:
             log.warning(f"  Slot {slot_id}: {ticker_legs} {ticker} legs open already — skipping")
             slot_state["next_entry"] = _next_trading_day(today)
@@ -2552,11 +2394,9 @@ def enter_slot(trade_client, opt_data_client, slot_id: str,
     except Exception:
         pass
 
-    # ── Strategy selection from regime map + indicator gates ─────
-    # Replaces the old skip-2 gate. select_strategy returns the spread
-    # type, the target deltas, and a skip_reason if entry should be
-    # blocked (either the regime maps to SKIP, or the RSI gate is firing
-    # on a CCS-candidate cell).
+    # ── Strategy selection — regime map disabled, always iron_condor ────
+    # select_strategy() always returns iron_condor now; see its docstring
+    # for the backtest rationale and how to roll back.
     decision = select_strategy(
         regime,
         vix_fresh_high=regime.get("vix_fresh_high", False),
@@ -2735,6 +2575,9 @@ def enter_slot(trade_client, opt_data_client, slot_id: str,
     # risk/reward standard. A flat dollar floor would hold XLE to a
     # ~3x stricter bar purely because of its lower price — blocking
     # sound XLE trades (see credit_gate_audit.py for the evidence).
+    #
+    # IC floor raised to 15% (was 0%) per the 2003-2026 backtest — see
+    # CONFIG comment above min_credit_ratio_ic.
     min_ratio_map = {
         "iron_condor":        cfg["min_credit_ratio_ic"],
         "put_credit_spread":  cfg["min_credit_ratio_pcs"],
@@ -2907,22 +2750,31 @@ def run():
         log.info(f"First run — initial capital set to ${portfolio_value:,.2f}")
 
     # ── Slot configuration ────────────────────────────────────
-    # 2× IWM + 2× XLE at 17.5% each = 70% deployed, 30% cash reserve.
-    # Real-data backtest 2008-2016 ($9k start) showed this config:
-    #   CAGR 24.87% vs 4× IWM 14.2% vs S&P 4.5%
-    #   Sharpe 1.26 vs IWM-only 0.94 (higher despite worse max DD)
-    #   The XLE slots profited from oil's 2009-2014 bull AND from CCS during
-    #   the 2014-16 oil crash (100% WR on XLE_CCS).
-    # Tradeoff: max DD -42% vs IWM-only -30% during XLE-specific shocks.
-    # See backtest_9k_xle.py for full analysis. Slots staggered 7 days.
+    # 4× IWM at 17.5% each = 70% deployed, 30% cash reserve.
+    #
+    # UPDATED: dropped the 2x IWM + 2x XLE split for 4x IWM-only, and
+    # dropped the regime map (see select_strategy()) for always-iron-
+    # condor at a 15% credit floor. A 2003-2026 backtest (vrp_backtest.py,
+    # model-priced Black-Scholes — see that script's header for
+    # methodology/caveats) showed this combination outperforming the prior
+    # IWM+XLE / regime-mapped / 0%-floor config: 28.6% CAGR vs 21.4%,
+    # Sharpe 1.02 vs 0.70, over the full window tested.
+    #
+    # Slots stay staggered 7 days apart so a new IWM condor opens roughly
+    # every 7 days at 30 DTE (CONFIG["stagger_days"]).
     TICKER_SLOTS = [
         ("IWM_A", "IWM", CONFIG["iwm_slot_risk"]),
-        ("XLE_B", "XLE", CONFIG["iwm_slot_risk"]),
+        ("IWM_B", "IWM", CONFIG["iwm_slot_risk"]),
         ("IWM_C", "IWM", CONFIG["iwm_slot_risk"]),
-        ("XLE_D", "XLE", CONFIG["iwm_slot_risk"]),
+        ("IWM_D", "IWM", CONFIG["iwm_slot_risk"]),
     ]
-    # On first run, gate B/C/D by 7/14/21 days so they open in sequence
-    FIRST_RUN_GATES = {"XLE_B": 7, "IWM_C": 14, "XLE_D": 21}
+    # On first run (or the first run after this change, for the newly
+    # introduced IWM_B/IWM_D slots), gate B/C/D by 7/14/21 days so they
+    # open in sequence rather than all four firing on the same day.
+    # Any slot that already exists in state.json (e.g. IWM_A, IWM_C from
+    # before this change) keeps its existing history and is left alone —
+    # this only gates brand-new slots.
+    FIRST_RUN_GATES = {"IWM_B": 7, "IWM_C": 14, "IWM_D": 21}
     for _sid, _tkr, _ in TICKER_SLOTS:
         slot_st = state["slots"].setdefault(_sid, {"position": None, "next_entry": None, "closed_trades": []})
         if _sid in FIRST_RUN_GATES and slot_st.get("next_entry") is None and slot_st.get("position") is None:
@@ -2938,6 +2790,8 @@ def run():
     assignment_alerts = check_assignment(trade_client, state, today)
 
     # ── Regime detection (one per distinct ticker in TICKER_SLOTS) ─
+    # NOTE: still computed for logging/diagnostics even though
+    # select_strategy() no longer branches on it (regime map disabled).
     log.info("Computing regimes...")
     regimes = {}
     distinct_tickers = sorted({t for _, t, _ in TICKER_SLOTS})
@@ -2963,8 +2817,9 @@ def run():
         else:
             log.info(f"  Slot {slot_id}: no open position")
 
-    # Second pass: legacy slots (still in state.json but removed from TICKER_SLOTS).
-    # We continue to manage these to close — but no new entries open here.
+    # Second pass: legacy slots (still in state.json but removed from
+    # TICKER_SLOTS — e.g. XLE_B / XLE_D from before this change). We
+    # continue to manage these to close — but no new entries open here.
     for slot_id in list(state["slots"].keys()):
         if slot_id in managed:
             continue
