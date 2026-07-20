@@ -167,6 +167,16 @@
       "position": null,
       "next_entry": "2026-07-20",
       "closed_trades": []
+    },
+    "IWM_B": {
+      "position": null,
+      "next_entry": "2026-07-27",
+      "closed_trades": []
+    },
+    "IWM_D": {
+      "position": null,
+      "next_entry": "2026-08-10",
+      "closed_trades": []
     }
   },
   "initial_capital": 9000.0,
@@ -340,6 +350,10 @@
     {
       "date": "2026-07-17",
       "value": 9024.5
+    },
+    {
+      "date": "2026-07-20",
+      "value": 9028.5
     }
   ],
   "seen_assignments": []
