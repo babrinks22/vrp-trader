@@ -130,7 +130,7 @@
     },
     "IWM_C": {
       "position": null,
-      "next_entry": "2026-07-28",
+      "next_entry": "2026-07-29",
       "closed_trades": [
         {
           "entry_date": "2026-06-04",
@@ -170,7 +170,7 @@
     },
     "IWM_B": {
       "position": null,
-      "next_entry": "2026-07-28",
+      "next_entry": "2026-07-29",
       "closed_trades": []
     },
     "IWM_D": {
@@ -373,6 +373,10 @@
     },
     {
       "date": "2026-07-27",
+      "value": 9020.5
+    },
+    {
+      "date": "2026-07-28",
       "value": 9020.5
     }
   ],
