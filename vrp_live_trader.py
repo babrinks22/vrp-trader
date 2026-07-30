@@ -147,7 +147,7 @@ CONFIG = {
     # with dropping the regime map and the XLE sleeve outperformed the prior
     # 0%-floor / regime-mapped / IWM+XLE config: 28.6% CAGR vs 21.4%, Sharpe
     # 1.02 vs 0.70, over the full 2003-2026 window.
-    "min_credit_ratio_ic":   0.15,   # IC  credit must be >= 15%  of wing width
+    "min_credit_ratio_ic":   0.12,   # IC  credit must be >= 12%  of wing width
     "min_credit_ratio_pcs":  0.00,   # PCS credit must be >= 9%   of wing width
     "min_credit_ratio_ccs":  0.000,  # CCS credit must be >= 8.5% of wing width
 
