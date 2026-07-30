@@ -4,3 +4,4 @@ date,slot,spread,trend_regime,vol_regime,atr_regime,underlying_px,net_credit,max
 2026-06-04,IWM_C,put_credit_spread,bullish,low,expanding,290.99,1.8,17.2,1,2026-07-02,0.1832,0.2418,diagrams/2026-06-04_IWM_C_put_credit_spread.png,S put $276 | L put $257
 2026-06-18,IWM_A,put_credit_spread,bullish,low,contracting,294.08,1.81,18.19,1,2026-07-17,0.2236,0.2485,diagrams/2026-06-18_IWM_A_put_credit_spread.png,S put $279 | L put $259
 2026-07-16,IWM_A,iron_condor,neutral,low,contracting,296.76,2.51,14.49,1,2026-08-14,0.1284,0.2029,diagrams/2026-07-16_IWM_A_iron_condor.png,S put $284 | L put $265 | S call $313 | L call $330
+2026-07-30,IWM_B,iron_condor,bearish,low,contracting,289.95,2.31,15.69,1,2026-08-28,0.1254,0.2296,diagrams/2026-07-30_IWM_B_iron_condor.png,S put $276 | L put $260 | S call $308 | L call $320

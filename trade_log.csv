@@ -8,3 +8,4 @@ date,action,slot,spread,trend,vol,atr,contracts,credit,credit_mid,max_loss,under
 2026-06-29,close,XLE_B,put_credit_spread,bullish,low,contracting,3,0.5,,4.5,,,dte_exit,-318.0,2026-06-03,26,f884a2af-aa77-4431-b3dc-2745378cb684
 2026-06-30,close,IWM_A,put_credit_spread,bullish,low,contracting,1,1.81,,18.19,,,profit_target,121.5,2026-06-18,12,2556ec91-f5da-4e42-9beb-a5b5c453af9f
 2026-07-16,open,IWM_A,iron_condor,neutral,low,contracting,1,2.51,2.56,14.49,296.76,2.0,,,,,7ebe42bf-f617-4491-a738-a7e69953f6c2
+2026-07-30,open,IWM_B,iron_condor,bearish,low,contracting,1,2.31,2.315,15.69,289.95,0.2,,,,,2fbe4dcf-6245-4f70-a9c0-b3021f6d7532
