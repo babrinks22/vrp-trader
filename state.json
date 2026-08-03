@@ -1,37 +1,8 @@
 {
   "slots": {
     "IWM_A": {
-      "position": {
-        "entry_date": "2026-07-16",
-        "expiry": "2026-08-14",
-        "spread": "iron_condor",
-        "trend_regime": "neutral",
-        "vol_regime": "low",
-        "atr_regime": "contracting",
-        "contracts": 1,
-        "credit_received": 2.51,
-        "credit_mid": 2.56,
-        "max_loss": 14.49,
-        "leg_symbols": [
-          "IWM260814P00284000",
-          "IWM260814P00265000",
-          "IWM260814C00313000",
-          "IWM260814C00330000"
-        ],
-        "leg_sides": [
-          true,
-          false,
-          true,
-          false
-        ],
-        "order_id": "7ebe42bf-f617-4491-a738-a7e69953f6c2",
-        "underlying_px": 296.760009765625,
-        "rsi_at_entry": 55.04548709590876,
-        "vix_fresh_high": false,
-        "call_delta": 0.2,
-        "put_delta": 0.2
-      },
-      "next_entry": null,
+      "position": null,
+      "next_entry": "2026-08-06",
       "closed_trades": [
         {
           "entry_date": "2026-05-26",
@@ -90,6 +61,39 @@
           "close_date": "2026-06-30",
           "close_reason": "profit_target",
           "realized_pnl": 121.50000000000001
+        },
+        {
+          "entry_date": "2026-07-16",
+          "expiry": "2026-08-14",
+          "spread": "iron_condor",
+          "trend_regime": "neutral",
+          "vol_regime": "low",
+          "atr_regime": "contracting",
+          "contracts": 1,
+          "credit_received": 2.51,
+          "credit_mid": 2.56,
+          "max_loss": 14.49,
+          "leg_symbols": [
+            "IWM260814P00284000",
+            "IWM260814P00265000",
+            "IWM260814C00313000",
+            "IWM260814C00330000"
+          ],
+          "leg_sides": [
+            true,
+            false,
+            true,
+            false
+          ],
+          "order_id": "7ebe42bf-f617-4491-a738-a7e69953f6c2",
+          "underlying_px": 296.760009765625,
+          "rsi_at_entry": 55.04548709590876,
+          "vix_fresh_high": false,
+          "call_delta": 0.2,
+          "put_delta": 0.2,
+          "close_date": "2026-08-03",
+          "close_reason": "profit_target",
+          "realized_pnl": 184.0
         }
       ]
     },
@@ -209,8 +213,8 @@
     }
   },
   "initial_capital": 9000.0,
-  "cumulative_pnl": 76.5,
-  "trade_count": 4,
+  "cumulative_pnl": 260.5,
+  "trade_count": 5,
   "equity_history": [
     {
       "date": "2026-05-21",
@@ -419,6 +423,10 @@
     {
       "date": "2026-07-31",
       "value": 9179.29
+    },
+    {
+      "date": "2026-08-03",
+      "value": 9214.29
     }
   ],
   "seen_assignments": []
