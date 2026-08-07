@@ -2258,3 +2258,56 @@
 2026-08-05 15:49:41,767  INFO  Generating portfolio equity chart...
 2026-08-05 15:49:42,131  INFO    Portfolio chart saved: diagrams/portfolio_equity.png  (value=$9,159, PnL=+$159)
 2026-08-05 15:49:42,131  INFO  Done.
+2026-08-07 14:38:39,566  INFO  ============================================================
+2026-08-07 14:38:39,566  INFO  VRP Live Trader — 2026-08-07  LIVE
+2026-08-07 14:38:39,566  INFO  ============================================================
+2026-08-07 14:38:39,671  INFO  Portfolio (last equity):   $9,296.12  (Live)
+2026-08-07 14:38:39,671  INFO  Portfolio (live MTM):      $9,258.12  (not used for sizing — includes option bid-ask drag)
+2026-08-07 14:38:39,672  INFO  Checking for assignments...
+2026-08-07 14:38:39,711  INFO    Assignment check: no stock positions found — all clear
+2026-08-07 14:38:39,711  INFO  Computing regimes...
+2026-08-07 14:38:40,334  INFO    IWM: Trend=neutral  Vol=low  ATR=expanding  → regime_dispatched
+2026-08-07 14:38:40,334  INFO      $300.68  VIX=14.9  HV=15.4%  RSI=58.7  fresh_VIX_high=False
+2026-08-07 14:38:40,334  INFO  Managing open positions...
+2026-08-07 14:38:40,335  INFO    Slot IWM_A: no open position
+2026-08-07 14:38:40,335  INFO    Slot IWM_B: iron_condor  DTE=21  held=8d  credit=$2.31
+2026-08-07 14:38:40,430  INFO    Slot IWM_C: no open position
+2026-08-07 14:38:40,431  INFO    Slot IWM_D: no open position
+2026-08-07 14:38:40,431  INFO  Checking entry opportunities...
+2026-08-07 14:38:40,453  INFO    Slot IWM_A: select_strategy → iron_condor  put_delta=0.20  call_delta=0.20  (RSI=58.7, vix_fresh_high=False)
+2026-08-07 14:38:40,659  INFO    Slot IWM_A: entering iron_condor  regime=neutral+low+expanding  rfr=3.72%  iv_est=0.181  target_expiry=2026-09-06
+2026-08-07 14:38:40,717  INFO    IV refined: HV-est=0.181 → implied=0.193 (from probe IWM260904P00289000 mid=$2.05)
+2026-08-07 14:38:40,923  INFO    Slot IWM_A: credit quality OK — $2.285/share = 14.3% of the $16.0 wing (min 12.0%)
+2026-08-07 14:38:40,963  INFO    Order submitted: b8e3954e-8d6a-4acd-b752-e68900832e46  limit=$2.29  qty=1  attempt=1
+2026-08-07 14:39:40,992  INFO    Order b8e3954e-8d6a-4acd-b752-e68900832e46 status=orderstatus.new (poll 1/3, waiting 60s...)
+2026-08-07 14:40:41,027  INFO    Order b8e3954e-8d6a-4acd-b752-e68900832e46 status=orderstatus.new (poll 2/3, waiting 60s...)
+2026-08-07 14:41:41,049  INFO    Order b8e3954e-8d6a-4acd-b752-e68900832e46 status=orderstatus.new (poll 3/3, waiting 60s...)
+2026-08-07 14:41:41,049  INFO    Not filled — conceding $0.05 of credit, new limit $2.24 (attempt 2/3)
+2026-08-07 14:41:41,101  INFO    Order submitted: b154f69e-9e68-4f4b-b796-2e336d923768  limit=$2.24  qty=1  attempt=2
+2026-08-07 14:42:41,123  INFO    Order b154f69e-9e68-4f4b-b796-2e336d923768 status=orderstatus.new (poll 1/3, waiting 60s...)
+2026-08-07 14:43:41,144  INFO    Order b154f69e-9e68-4f4b-b796-2e336d923768 status=orderstatus.new (poll 2/3, waiting 60s...)
+2026-08-07 14:44:41,167  INFO    Order b154f69e-9e68-4f4b-b796-2e336d923768 status=orderstatus.new (poll 3/3, waiting 60s...)
+2026-08-07 14:44:41,167  INFO    Not filled — conceding $0.05 of credit, new limit $2.19 (attempt 3/3)
+2026-08-07 14:44:41,221  INFO    Order submitted: 1f550435-cd86-4be2-9870-bd35391497fe  limit=$2.19  qty=1  attempt=3
+2026-08-07 14:45:41,244  INFO    Fill confirmed (mleg avg): raw=-2.1900 → credit=$2.1900/share  (limit $2.19, slippage 0.0%)
+2026-08-07 14:45:41,244  INFO    Slot IWM_A: fill slippage $2.2850 (mid) → $2.1900 (fill)  = 4.2%
+2026-08-07 14:45:41,581  INFO  Failed to extract font properties from /usr/share/fonts/truetype/noto/NotoColorEmoji.ttf: Non-scalable fonts are not supported
+2026-08-07 14:45:41,625  INFO  generated new fontManager
+2026-08-07 14:45:42,683  INFO    Diagram saved: diagrams/2026-08-07_IWM_A_iron_condor.png
+2026-08-07 14:45:42,685  INFO    Spread logged: spread_log.csv
+2026-08-07 14:45:42,685  INFO    Slot IWM_A: opened iron_condor  1 contracts  credit=$2.1900 (mid $2.2850)  max_loss=$13.8100
+2026-08-07 14:45:42,685  INFO    Slot IWM_C: most recent IWM entry was 2026-08-07 (open or closed) — stagger gate until 2026-08-14 (7d)
+2026-08-07 14:45:42,685  INFO    Slot IWM_D: most recent IWM entry was 2026-08-07 (open or closed) — stagger gate until 2026-08-14 (7d)
+2026-08-07 14:45:42,686  INFO  State saved.
+2026-08-07 14:45:42,686  INFO  ------------------------------------------------------------
+2026-08-07 14:45:42,686  INFO    Slot IWM_A (IWM 17.5%): OPEN — iron_condor  1 contracts  DTE=28  credit=$2.19
+2026-08-07 14:45:42,686  INFO    Slot IWM_B (IWM 17.5%): OPEN — iron_condor  1 contracts  DTE=21  credit=$2.31
+2026-08-07 14:45:42,686  INFO    Slot IWM_C (IWM 17.5%): EMPTY  next: 2026-08-14
+2026-08-07 14:45:42,686  INFO    Slot IWM_D (IWM 17.5%): EMPTY  next: 2026-08-14
+2026-08-07 14:45:42,686  INFO    Portfolio: $9,296  |  Cash reserve ~20%
+2026-08-07 14:45:42,686  INFO  Generating daily live diagrams...
+2026-08-07 14:45:43,940  INFO    Live diagram saved: diagrams/2026-08-07_IWM_A_live.png  (P&L +$4, 2% captured)
+2026-08-07 14:45:44,895  INFO    Live diagram saved: diagrams/2026-08-07_IWM_B_live.png  (P&L +$40, 17% captured)
+2026-08-07 14:45:44,895  INFO  Generating portfolio equity chart...
+2026-08-07 14:45:45,187  INFO    Portfolio chart saved: diagrams/portfolio_equity.png  (value=$9,296, PnL=+$296)
+2026-08-07 14:45:45,187  INFO  Done.
