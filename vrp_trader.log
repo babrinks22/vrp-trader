@@ -2311,3 +2311,34 @@
 2026-08-07 14:45:44,895  INFO  Generating portfolio equity chart...
 2026-08-07 14:45:45,187  INFO    Portfolio chart saved: diagrams/portfolio_equity.png  (value=$9,296, PnL=+$296)
 2026-08-07 14:45:45,187  INFO  Done.
+2026-08-10 14:41:33,818  INFO  ============================================================
+2026-08-10 14:41:33,818  INFO  VRP Live Trader — 2026-08-10  LIVE
+2026-08-10 14:41:33,818  INFO  ============================================================
+2026-08-10 14:41:34,072  INFO  Portfolio (last equity):   $9,241.91  (Live)
+2026-08-10 14:41:34,072  INFO  Portfolio (live MTM):      $9,292.91  (not used for sizing — includes option bid-ask drag)
+2026-08-10 14:41:34,072  INFO  Checking for assignments...
+2026-08-10 14:41:34,157  INFO    Assignment check: no stock positions found — all clear
+2026-08-10 14:41:34,157  INFO  Computing regimes...
+2026-08-10 14:41:34,560  INFO    IWM: Trend=neutral  Vol=low  ATR=expanding  → regime_dispatched
+2026-08-10 14:41:34,560  INFO      $300.59  VIX=15.2  HV=15.3%  RSI=58.0  fresh_VIX_high=False
+2026-08-10 14:41:34,560  INFO  Managing open positions...
+2026-08-10 14:41:34,560  INFO    Slot IWM_A: iron_condor  DTE=25  held=3d  credit=$2.19
+2026-08-10 14:41:34,891  INFO    Slot IWM_B: iron_condor  DTE=18  held=11d  credit=$2.31
+2026-08-10 14:41:35,148  INFO    Slot IWM_C: no open position
+2026-08-10 14:41:35,149  INFO    Slot IWM_D: no open position
+2026-08-10 14:41:35,149  INFO  Checking entry opportunities...
+2026-08-10 14:41:35,150  INFO  State saved.
+2026-08-10 14:41:35,150  INFO  ------------------------------------------------------------
+2026-08-10 14:41:35,150  INFO    Slot IWM_A (IWM 17.5%): OPEN — iron_condor  1 contracts  DTE=25  credit=$2.19
+2026-08-10 14:41:35,150  INFO    Slot IWM_B (IWM 17.5%): OPEN — iron_condor  1 contracts  DTE=18  credit=$2.31
+2026-08-10 14:41:35,150  INFO    Slot IWM_C (IWM 17.5%): EMPTY  next: 2026-08-14
+2026-08-10 14:41:35,150  INFO    Slot IWM_D (IWM 17.5%): EMPTY  next: 2026-08-14
+2026-08-10 14:41:35,150  INFO    Portfolio: $9,242  |  Cash reserve ~20%
+2026-08-10 14:41:35,150  INFO  Generating daily live diagrams...
+2026-08-10 14:41:36,939  INFO  Failed to extract font properties from /usr/share/fonts/truetype/noto/NotoColorEmoji.ttf: Non-scalable fonts are not supported
+2026-08-10 14:41:37,589  INFO  generated new fontManager
+2026-08-10 14:41:39,103  INFO    Live diagram saved: diagrams/2026-08-10_IWM_A_live.png  (P&L +$25, 12% captured)
+2026-08-10 14:41:40,358  INFO    Live diagram saved: diagrams/2026-08-10_IWM_B_live.png  (P&L +$58, 25% captured)
+2026-08-10 14:41:40,358  INFO  Generating portfolio equity chart...
+2026-08-10 14:41:40,734  INFO    Portfolio chart saved: diagrams/portfolio_equity.png  (value=$9,242, PnL=+$242)
+2026-08-10 14:41:40,735  INFO  Done.
