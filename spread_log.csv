@@ -7,3 +7,4 @@ date,slot,spread,trend_regime,vol_regime,atr_regime,underlying_px,net_credit,max
 2026-07-30,IWM_B,iron_condor,bearish,low,contracting,289.95,2.31,15.69,1,2026-08-28,0.1254,0.2296,diagrams/2026-07-30_IWM_B_iron_condor.png,S put $276 | L put $260 | S call $308 | L call $320
 2026-08-07,IWM_A,iron_condor,neutral,low,expanding,300.68,2.19,13.81,1,2026-09-04,0.1535,0.1927,diagrams/2026-08-07_IWM_A_iron_condor.png,S put $288 | L put $272 | S call $316 | L call $332
 2026-08-14,IWM_C,iron_condor,bullish,low,contracting,304.83,1.9,13.1,1,2026-09-11,0.1522,0.1802,diagrams/2026-08-14_IWM_C_iron_condor.png,S put $293 | L put $278 | S call $320 | L call $336
+2026-08-21,IWM_D,iron_condor,neutral,low,contracting,298.66,2.01,14.99,1,2026-09-18,0.1548,0.205,diagrams/2026-08-21_IWM_D_iron_condor.png,S put $286 | L put $269 | S call $315 | L call $325
