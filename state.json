@@ -2,7 +2,7 @@
   "slots": {
     "IWM_A": {
       "position": null,
-      "next_entry": "2026-08-28",
+      "next_entry": "2026-08-31",
       "closed_trades": [
         {
           "entry_date": "2026-05-26",
@@ -236,7 +236,7 @@
     },
     "IWM_B": {
       "position": null,
-      "next_entry": "2026-08-28",
+      "next_entry": "2026-08-31",
       "closed_trades": [
         {
           "entry_date": "2026-07-30",
@@ -587,6 +587,10 @@
     {
       "date": "2026-08-27",
       "value": 9641.11
+    },
+    {
+      "date": "2026-08-28",
+      "value": 9694.11
     }
   ],
   "seen_assignments": []
