@@ -3054,3 +3054,43 @@
 2026-09-07 18:23:23,190  INFO  Generating portfolio equity chart...
 2026-09-07 18:23:23,469  INFO    Portfolio chart saved: diagrams/portfolio_equity.png  (value=$9,767, PnL=+$767)
 2026-09-07 18:23:23,469  INFO  Done.
+2026-09-08 17:29:57,117  INFO  ============================================================
+2026-09-08 17:29:57,117  INFO  VRP Live Trader — 2026-09-08  LIVE
+2026-09-08 17:29:57,117  INFO  ============================================================
+2026-09-08 17:29:57,178  INFO  Portfolio (last equity):   $9,766.90  (Live)
+2026-09-08 17:29:57,178  INFO  Portfolio (live MTM):      $9,762.90  (not used for sizing — includes option bid-ask drag)
+2026-09-08 17:29:57,178  INFO  Checking for assignments...
+2026-09-08 17:29:57,188  INFO    Assignment check: no stock positions found — all clear
+2026-09-08 17:29:57,189  INFO  Computing regimes...
+2026-09-08 17:29:57,685  INFO    IWM: Trend=bearish  Vol=low  ATR=contracting  → regime_dispatched
+2026-09-08 17:29:57,685  INFO      $295.96  VIX=15.3  HV=12.0%  RSI=48.1  fresh_VIX_high=False
+2026-09-08 17:29:57,685  INFO  Managing open positions...
+2026-09-08 17:29:57,685  INFO    Slot IWM_A: iron_condor  DTE=24  held=5d  credit=$1.89
+2026-09-08 17:29:57,857  INFO    Slot IWM_B: no open position
+2026-09-08 17:29:57,857  INFO    Slot IWM_C: iron_condor  DTE=3  held=25d  credit=$1.90
+2026-09-08 17:29:57,857  INFO    Slot IWM_C: DTE exit (dte=3)
+2026-09-08 17:29:57,866  INFO    Leg IWM260911C00320000: value $0.010/share < $0.03 — letting expire worthless
+2026-09-08 17:29:57,866  INFO    Leg IWM260911C00336000: value $0.000/share < $0.03 — letting expire worthless
+2026-09-08 17:29:57,894  INFO    Close order submitted: 5cb3f22d-04e7-4b3b-a8b5-d57db010cd11  debit limit=$0.91  qty=1  attempt=1/3
+2026-09-08 17:30:12,911  INFO    Close filled: debit $0.9100/share  (mid was $0.91, slippage +0.0%)
+2026-09-08 17:30:12,911  INFO    MLEG limit close succeeded — 2 legs
+2026-09-08 17:30:12,911  INFO    All 4/4 legs closed/expired successfully.
+2026-09-08 17:30:12,961  INFO    Closed: dte_exit  P&L=$105.50  |  cumulative=$677.00  trades=8
+2026-09-08 17:30:12,961  INFO    Slot IWM_D: iron_condor  DTE=10  held=18d  credit=$2.01
+2026-09-08 17:30:13,216  INFO  Checking entry opportunities...
+2026-09-08 17:30:13,216  INFO    Slot IWM_C: most recent IWM entry was 2026-09-03 (open or closed) — stagger gate until 2026-09-10 (7d)
+2026-09-08 17:30:13,217  INFO  State saved.
+2026-09-08 17:30:13,217  INFO  ------------------------------------------------------------
+2026-09-08 17:30:13,217  INFO    Slot IWM_A (IWM 17.5%): OPEN — iron_condor  1 contracts  DTE=24  credit=$1.89
+2026-09-08 17:30:13,217  INFO    Slot IWM_B (IWM 17.5%): EMPTY  next: 2026-09-10
+2026-09-08 17:30:13,217  INFO    Slot IWM_C (IWM 17.5%): EMPTY  next: 2026-09-10
+2026-09-08 17:30:13,217  INFO    Slot IWM_D (IWM 17.5%): OPEN — iron_condor  1 contracts  DTE=10  credit=$2.01
+2026-09-08 17:30:13,217  INFO    Portfolio: $9,767  |  Cash reserve ~20%
+2026-09-08 17:30:13,217  INFO  Generating daily live diagrams...
+2026-09-08 17:30:13,572  INFO  Failed to extract font properties from /usr/share/fonts/truetype/noto/NotoColorEmoji.ttf: Non-scalable fonts are not supported
+2026-09-08 17:30:13,592  INFO  generated new fontManager
+2026-09-08 17:30:14,993  INFO    Live diagram saved: diagrams/2026-09-08_IWM_A_live.png  (P&L +$29, 15% captured)
+2026-09-08 17:30:16,251  INFO    Live diagram saved: diagrams/2026-09-08_IWM_D_live.png  (P&L +$117, 58% captured)
+2026-09-08 17:30:16,251  INFO  Generating portfolio equity chart...
+2026-09-08 17:30:16,647  INFO    Portfolio chart saved: diagrams/portfolio_equity.png  (value=$9,767, PnL=+$767)
+2026-09-08 17:30:16,647  INFO  Done.
