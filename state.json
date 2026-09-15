@@ -336,43 +336,48 @@
       ]
     },
     "IWM_D": {
-      "position": {
-        "entry_date": "2026-08-21",
-        "expiry": "2026-09-18",
-        "spread": "iron_condor",
-        "trend_regime": "neutral",
-        "vol_regime": "low",
-        "atr_regime": "contracting",
-        "contracts": 1,
-        "credit_received": 2.01,
-        "credit_mid": 2.06,
-        "max_loss": 14.99,
-        "leg_symbols": [
-          "IWM260918P00286000",
-          "IWM260918P00269000",
-          "IWM260918C00315000",
-          "IWM260918C00325000"
-        ],
-        "leg_sides": [
-          true,
-          false,
-          true,
-          false
-        ],
-        "order_id": "d6d7f74f-8e7e-4177-99b7-afa6bc2743ef",
-        "underlying_px": 298.6600036621094,
-        "rsi_at_entry": 50.645698776373244,
-        "vix_fresh_high": false,
-        "call_delta": 0.2,
-        "put_delta": 0.2
-      },
-      "next_entry": null,
-      "closed_trades": []
+      "position": null,
+      "next_entry": "2026-09-17",
+      "closed_trades": [
+        {
+          "entry_date": "2026-08-21",
+          "expiry": "2026-09-18",
+          "spread": "iron_condor",
+          "trend_regime": "neutral",
+          "vol_regime": "low",
+          "atr_regime": "contracting",
+          "contracts": 1,
+          "credit_received": 2.01,
+          "credit_mid": 2.06,
+          "max_loss": 14.99,
+          "leg_symbols": [
+            "IWM260918P00286000",
+            "IWM260918P00269000",
+            "IWM260918C00315000",
+            "IWM260918C00325000"
+          ],
+          "leg_sides": [
+            true,
+            false,
+            true,
+            false
+          ],
+          "order_id": "d6d7f74f-8e7e-4177-99b7-afa6bc2743ef",
+          "underlying_px": 298.6600036621094,
+          "rsi_at_entry": 50.645698776373244,
+          "vix_fresh_high": false,
+          "call_delta": 0.2,
+          "put_delta": 0.2,
+          "close_date": "2026-09-15",
+          "close_reason": "dte_exit",
+          "realized_pnl": -87.5
+        }
+      ]
     }
   },
   "initial_capital": 9000.0,
-  "cumulative_pnl": 677.0,
-  "trade_count": 8,
+  "cumulative_pnl": 589.5,
+  "trade_count": 9,
   "equity_history": [
     {
       "date": "2026-05-21",
@@ -697,6 +702,10 @@
     {
       "date": "2026-09-14",
       "value": 9685.57
+    },
+    {
+      "date": "2026-09-15",
+      "value": 9647.57
     }
   ],
   "seen_assignments": []
