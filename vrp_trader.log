@@ -3315,3 +3315,46 @@
 2026-09-16 17:44:20,888  INFO  Generating portfolio equity chart...
 2026-09-16 17:44:21,261  INFO    Portfolio chart saved: diagrams/portfolio_equity.png  (value=$9,484, PnL=+$484)
 2026-09-16 17:44:21,261  INFO  Done.
+2026-09-17 17:44:47,299  INFO  ============================================================
+2026-09-17 17:44:47,299  INFO  VRP Live Trader — 2026-09-17  LIVE
+2026-09-17 17:44:47,299  INFO  ============================================================
+2026-09-17 17:44:47,521  INFO  Portfolio (last equity):   $9,485.45  (Live)
+2026-09-17 17:44:47,521  INFO  Portfolio (live MTM):      $9,632.45  (not used for sizing — includes option bid-ask drag)
+2026-09-17 17:44:47,521  INFO  Checking for assignments...
+2026-09-17 17:44:47,577  INFO    Assignment check: no stock positions found — all clear
+2026-09-17 17:44:47,577  INFO  Computing regimes...
+2026-09-17 17:44:48,518  INFO    IWM: Trend=bearish  Vol=low  ATR=contracting  → regime_dispatched
+2026-09-17 17:44:48,518  INFO      $286.50  VIX=15.7  HV=12.0%  RSI=38.9  fresh_VIX_high=False
+2026-09-17 17:44:48,518  INFO  Managing open positions...
+2026-09-17 17:44:48,518  INFO    Slot IWM_A: iron_condor  DTE=15  held=14d  credit=$1.89
+2026-09-17 17:44:48,747  INFO    Slot IWM_B: iron_condor  DTE=22  held=7d  credit=$2.28
+2026-09-17 17:44:48,814  INFO    Slot IWM_C: no open position
+2026-09-17 17:44:48,814  INFO    Slot IWM_D: no open position
+2026-09-17 17:44:48,814  INFO  Checking entry opportunities...
+2026-09-17 17:44:48,878  INFO    Slot IWM_C: select_strategy → iron_condor  put_delta=0.20  call_delta=0.20  (RSI=38.9, vix_fresh_high=False)
+2026-09-17 17:44:49,364  INFO    Slot IWM_C: entering iron_condor  regime=bearish+low+contracting  rfr=3.97%  iv_est=0.141  target_expiry=2026-10-17
+2026-09-17 17:44:49,516  INFO    IV refined: HV-est=0.141 → implied=0.191 (from probe IWM261016P00278000 mid=$2.55)
+2026-09-17 17:44:49,977  INFO    Slot IWM_C: credit quality OK — $2.019/share = 13.5% of the $15.0 wing (min 12.0%)
+2026-09-17 17:44:50,049  INFO    Order submitted: 701a1e96-33bb-46fb-a847-4ac2d47edf15  limit=$2.02  qty=1  attempt=1
+2026-09-17 17:45:50,109  INFO    Fill confirmed (mleg avg): raw=-2.0200 → credit=$2.0200/share  (limit $2.02, slippage 0.0%)
+2026-09-17 17:45:50,109  INFO    Slot IWM_C: fill slippage $2.0195 (mid) → $2.0200 (fill)  = -0.0%
+2026-09-17 17:45:50,488  INFO  Failed to extract font properties from /usr/share/fonts/truetype/noto/NotoColorEmoji.ttf: Non-scalable fonts are not supported
+2026-09-17 17:45:50,493  INFO  generated new fontManager
+2026-09-17 17:45:51,877  INFO    Diagram saved: diagrams/2026-09-17_IWM_C_iron_condor.png
+2026-09-17 17:45:51,879  INFO    Spread logged: spread_log.csv
+2026-09-17 17:45:51,879  INFO    Slot IWM_C: opened iron_condor  1 contracts  credit=$2.0200 (mid $2.0195)  max_loss=$12.9800
+2026-09-17 17:45:51,879  INFO    Slot IWM_D: most recent IWM entry was 2026-09-17 (open or closed) — stagger gate until 2026-09-24 (7d)
+2026-09-17 17:45:51,880  INFO  State saved.
+2026-09-17 17:45:51,880  INFO  ------------------------------------------------------------
+2026-09-17 17:45:51,880  INFO    Slot IWM_A (IWM 17.5%): OPEN — iron_condor  1 contracts  DTE=15  credit=$1.89
+2026-09-17 17:45:51,880  INFO    Slot IWM_B (IWM 17.5%): OPEN — iron_condor  1 contracts  DTE=22  credit=$2.28
+2026-09-17 17:45:51,881  INFO    Slot IWM_C (IWM 17.5%): OPEN — iron_condor  1 contracts  DTE=29  credit=$2.02
+2026-09-17 17:45:51,881  INFO    Slot IWM_D (IWM 17.5%): EMPTY  next: 2026-09-24
+2026-09-17 17:45:51,881  INFO    Portfolio: $9,485  |  Cash reserve ~20%
+2026-09-17 17:45:51,881  INFO  Generating daily live diagrams...
+2026-09-17 17:45:53,096  INFO    Live diagram saved: diagrams/2026-09-17_IWM_A_live.png  (P&L $-3, -2% captured)
+2026-09-17 17:45:54,429  INFO    Live diagram saved: diagrams/2026-09-17_IWM_C_live.png  (P&L $-2, -1% captured)
+2026-09-17 17:45:55,632  INFO    Live diagram saved: diagrams/2026-09-17_IWM_B_live.png  (P&L +$104, 46% captured)
+2026-09-17 17:45:55,632  INFO  Generating portfolio equity chart...
+2026-09-17 17:45:56,048  INFO    Portfolio chart saved: diagrams/portfolio_equity.png  (value=$9,485, PnL=+$485)
+2026-09-17 17:45:56,049  INFO  Done.
