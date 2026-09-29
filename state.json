@@ -1,37 +1,8 @@
 {
   "slots": {
     "IWM_A": {
-      "position": {
-        "entry_date": "2026-09-03",
-        "expiry": "2026-10-02",
-        "spread": "iron_condor",
-        "trend_regime": "neutral",
-        "vol_regime": "low",
-        "atr_regime": "expanding",
-        "contracts": 1,
-        "credit_received": 1.89,
-        "credit_mid": 1.89,
-        "max_loss": 13.11,
-        "leg_symbols": [
-          "IWM261002P00283000",
-          "IWM261002P00268000",
-          "IWM260930C00310000",
-          "IWM260930C00325000"
-        ],
-        "leg_sides": [
-          true,
-          false,
-          true,
-          false
-        ],
-        "order_id": "3a37a764-cc12-462a-869e-d8c5bfcce398",
-        "underlying_px": 294.8999938964844,
-        "rsi_at_entry": 45.83393135282739,
-        "vix_fresh_high": false,
-        "call_delta": 0.2,
-        "put_delta": 0.2
-      },
-      "next_entry": null,
+      "position": null,
+      "next_entry": "2026-10-01",
       "closed_trades": [
         {
           "entry_date": "2026-05-26",
@@ -156,6 +127,39 @@
           "close_date": "2026-08-25",
           "close_reason": "profit_target",
           "realized_pnl": 159.0
+        },
+        {
+          "entry_date": "2026-09-03",
+          "expiry": "2026-10-02",
+          "spread": "iron_condor",
+          "trend_regime": "neutral",
+          "vol_regime": "low",
+          "atr_regime": "expanding",
+          "contracts": 1,
+          "credit_received": 1.89,
+          "credit_mid": 1.89,
+          "max_loss": 13.11,
+          "leg_symbols": [
+            "IWM261002P00283000",
+            "IWM261002P00268000",
+            "IWM260930C00310000",
+            "IWM260930C00325000"
+          ],
+          "leg_sides": [
+            true,
+            false,
+            true,
+            false
+          ],
+          "order_id": "3a37a764-cc12-462a-869e-d8c5bfcce398",
+          "underlying_px": 294.8999938964844,
+          "rsi_at_entry": 45.83393135282739,
+          "vix_fresh_high": false,
+          "call_delta": 0.2,
+          "put_delta": 0.2,
+          "close_date": "2026-09-29",
+          "close_reason": "dte_exit",
+          "realized_pnl": -307.0
         }
       ]
     },
@@ -434,8 +438,8 @@
     }
   },
   "initial_capital": 9000.0,
-  "cumulative_pnl": 589.5,
-  "trade_count": 9,
+  "cumulative_pnl": 282.5,
+  "trade_count": 10,
   "equity_history": [
     {
       "date": "2026-05-21",
@@ -800,6 +804,10 @@
     {
       "date": "2026-09-28",
       "value": 9588.03
+    },
+    {
+      "date": "2026-09-29",
+      "value": 9392.03
     }
   ],
   "seen_assignments": []
