@@ -1,8 +1,37 @@
 {
   "slots": {
     "IWM_A": {
-      "position": null,
-      "next_entry": "2026-10-01",
+      "position": {
+        "entry_date": "2026-10-01",
+        "expiry": "2026-10-30",
+        "spread": "iron_condor",
+        "trend_regime": "bearish",
+        "vol_regime": "low",
+        "atr_regime": "contracting",
+        "contracts": 1,
+        "credit_received": 2.58,
+        "credit_mid": 2.575,
+        "max_loss": 13.42,
+        "leg_symbols": [
+          "IWM261030P00267000",
+          "IWM261030P00250000",
+          "IWM261030C00295000",
+          "IWM261030C00311000"
+        ],
+        "leg_sides": [
+          true,
+          false,
+          true,
+          false
+        ],
+        "order_id": "4603efdf-4597-4f76-bf30-e7d12ac9e3a5",
+        "underlying_px": 279.20001220703125,
+        "rsi_at_entry": 33.49394194420448,
+        "vix_fresh_high": false,
+        "call_delta": 0.2,
+        "put_delta": 0.2
+      },
+      "next_entry": null,
       "closed_trades": [
         {
           "entry_date": "2026-05-26",
@@ -812,6 +841,10 @@
     {
       "date": "2026-09-30",
       "value": 9278.91
+    },
+    {
+      "date": "2026-10-01",
+      "value": 9234.91
     }
   ],
   "seen_assignments": []
