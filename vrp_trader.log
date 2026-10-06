@@ -3795,3 +3795,35 @@
 2026-10-05 21:24:19,015  INFO  Generating portfolio equity chart...
 2026-10-05 21:24:19,375  INFO    Portfolio chart saved: diagrams/portfolio_equity.png  (value=$9,625, PnL=+$625)
 2026-10-05 21:24:19,375  INFO  Done.
+2026-10-06 19:03:26,761  INFO  ============================================================
+2026-10-06 19:03:26,761  INFO  VRP Live Trader — 2026-10-06  LIVE
+2026-10-06 19:03:26,761  INFO  ============================================================
+2026-10-06 19:03:26,908  INFO  Portfolio (last equity):   $9,684.60  (Live)
+2026-10-06 19:03:26,908  INFO  Portfolio (live MTM):      $9,712.60  (not used for sizing — includes option bid-ask drag)
+2026-10-06 19:03:26,908  INFO  Checking for assignments...
+2026-10-06 19:03:26,948  INFO    Assignment check: no stock positions found — all clear
+2026-10-06 19:03:26,948  INFO  Computing regimes...
+2026-10-06 19:03:28,495  INFO    IWM: Trend=bearish  Vol=low  ATR=contracting  → regime_dispatched
+2026-10-06 19:03:28,495  INFO      $281.43  VIX=15.0  HV=11.6%  RSI=40.9  fresh_VIX_high=False
+2026-10-06 19:03:28,495  INFO  Managing open positions...
+2026-10-06 19:03:28,495  INFO    Slot IWM_A: iron_condor  DTE=24  held=5d  credit=$2.58
+2026-10-06 19:03:28,618  INFO    Slot IWM_B: no open position
+2026-10-06 19:03:28,618  INFO    Slot IWM_C: iron_condor  DTE=10  held=19d  credit=$2.02
+2026-10-06 19:03:28,649  INFO    Slot IWM_D: iron_condor  DTE=17  held=12d  credit=$2.25
+2026-10-06 19:03:28,704  INFO  Checking entry opportunities...
+2026-10-06 19:03:28,705  INFO  State saved.
+2026-10-06 19:03:28,705  INFO  ------------------------------------------------------------
+2026-10-06 19:03:28,705  INFO    Slot IWM_A (IWM 17.5%): OPEN — iron_condor  1 contracts  DTE=24  credit=$2.58
+2026-10-06 19:03:28,705  INFO    Slot IWM_B (IWM 17.5%): EMPTY  next: 2026-10-08
+2026-10-06 19:03:28,705  INFO    Slot IWM_C (IWM 17.5%): OPEN — iron_condor  1 contracts  DTE=10  credit=$2.02
+2026-10-06 19:03:28,705  INFO    Slot IWM_D (IWM 17.5%): OPEN — iron_condor  1 contracts  DTE=17  credit=$2.25
+2026-10-06 19:03:28,705  INFO    Portfolio: $9,685  |  Cash reserve ~20%
+2026-10-06 19:03:28,705  INFO  Generating daily live diagrams...
+2026-10-06 19:03:29,915  INFO  Failed to extract font properties from /usr/share/fonts/truetype/noto/NotoColorEmoji.ttf: Non-scalable fonts are not supported
+2026-10-06 19:03:29,937  INFO  generated new fontManager
+2026-10-06 19:03:30,774  INFO    Live diagram saved: diagrams/2026-10-06_IWM_A_live.png  (P&L +$86, 33% captured)
+2026-10-06 19:03:31,510  INFO    Live diagram saved: diagrams/2026-10-06_IWM_C_live.png  (P&L +$107, 53% captured)
+2026-10-06 19:03:32,146  INFO    Live diagram saved: diagrams/2026-10-06_IWM_D_live.png  (P&L +$137, 61% captured)
+2026-10-06 19:03:32,147  INFO  Generating portfolio equity chart...
+2026-10-06 19:03:32,371  INFO    Portfolio chart saved: diagrams/portfolio_equity.png  (value=$9,685, PnL=+$685)
+2026-10-06 19:03:32,371  INFO  Done.
