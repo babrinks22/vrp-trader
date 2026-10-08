@@ -330,8 +330,37 @@
       "closed_trades": []
     },
     "IWM_B": {
-      "position": null,
-      "next_entry": "2026-10-08",
+      "position": {
+        "entry_date": "2026-10-08",
+        "expiry": "2026-11-06",
+        "spread": "iron_condor",
+        "trend_regime": "bearish",
+        "vol_regime": "low",
+        "atr_regime": "expanding",
+        "contracts": 1,
+        "credit_received": 2.49,
+        "credit_mid": 2.55,
+        "max_loss": 13.51,
+        "leg_symbols": [
+          "IWM261106P00266000",
+          "IWM261106P00250000",
+          "IWM261106C00293000",
+          "IWM261106C00309000"
+        ],
+        "leg_sides": [
+          true,
+          false,
+          true,
+          false
+        ],
+        "order_id": "71a07826-a454-438c-80de-74cabf355f9f",
+        "underlying_px": 277.6199951171875,
+        "rsi_at_entry": 35.0879663380136,
+        "vix_fresh_high": false,
+        "call_delta": 0.2,
+        "put_delta": 0.2
+      },
+      "next_entry": null,
       "closed_trades": [
         {
           "entry_date": "2026-07-30",
@@ -865,6 +894,10 @@
     {
       "date": "2026-10-07",
       "value": 9713.6
+    },
+    {
+      "date": "2026-10-08",
+      "value": 9629.6
     }
   ],
   "seen_assignments": []
