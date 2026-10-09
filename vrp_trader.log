@@ -3912,3 +3912,49 @@
 2026-10-08 19:32:55,291  INFO  Generating portfolio equity chart...
 2026-10-08 19:32:55,821  INFO    Portfolio chart saved: diagrams/portfolio_equity.png  (value=$9,630, PnL=+$630)
 2026-10-08 19:32:55,821  INFO  Done.
+2026-10-09 18:59:46,736  INFO  ============================================================
+2026-10-09 18:59:46,736  INFO  VRP Live Trader — 2026-10-09  LIVE
+2026-10-09 18:59:46,736  INFO  ============================================================
+2026-10-09 18:59:46,824  INFO  Portfolio (last equity):   $9,651.40  (Live)
+2026-10-09 18:59:46,824  INFO  Portfolio (live MTM):      $9,812.40  (not used for sizing — includes option bid-ask drag)
+2026-10-09 18:59:46,824  INFO  Checking for assignments...
+2026-10-09 18:59:46,836  INFO    Assignment check: no stock positions found — all clear
+2026-10-09 18:59:46,837  INFO  Computing regimes...
+2026-10-09 18:59:47,396  INFO    IWM: Trend=bearish  Vol=low  ATR=expanding  → regime_dispatched
+2026-10-09 18:59:47,396  INFO      $279.51  VIX=14.9  HV=11.4%  RSI=40.0  fresh_VIX_high=False
+2026-10-09 18:59:47,396  INFO  Managing open positions...
+2026-10-09 18:59:47,396  INFO    Slot IWM_A: iron_condor  DTE=21  held=8d  credit=$2.58
+2026-10-09 18:59:47,466  INFO    Slot IWM_B: iron_condor  DTE=28  held=1d  credit=$2.49
+2026-10-09 18:59:47,466  INFO    Slot IWM_C: iron_condor  DTE=7  held=22d  credit=$2.02
+2026-10-09 18:59:47,510  INFO    Slot IWM_D: iron_condor  DTE=14  held=15d  credit=$2.25
+2026-10-09 18:59:47,525  INFO    Slot IWM_D: profit target  profit=$1.62 >= target=$1.46
+2026-10-09 18:59:47,540  INFO    Leg IWM261023C00312500: value $0.010/share < $0.03 — letting expire worthless
+2026-10-09 18:59:47,582  INFO    Close order submitted: a1978432-07fa-4dba-87a0-ff23e6e01b3a  debit limit=$0.67  qty=1  attempt=1/3
+2026-10-09 19:00:02,598  INFO    Close order status=orderstatus.new (poll 1/3, waiting 15s...)
+2026-10-09 19:00:17,617  INFO    Close order status=orderstatus.new (poll 2/3, waiting 15s...)
+2026-10-09 19:00:32,631  INFO    Close order status=orderstatus.new (poll 3/3, waiting 15s...)
+2026-10-09 19:00:34,656  INFO    Order a1978432-07fa-4dba-87a0-ff23e6e01b3a reached terminal state 'orderstatus.canceled' — contracts released
+2026-10-09 19:00:34,656  INFO    Close not filled — conceding $0.05 more, new debit limit $0.72 (attempt 2/3)
+2026-10-09 19:00:34,703  INFO    Close order submitted: 5c0ef52d-e82e-4bb1-9a22-976ecfeca2f8  debit limit=$0.72  qty=1  attempt=2/3
+2026-10-09 19:00:49,717  INFO    Close filled: debit $0.7000/share  (mid was $0.67, slippage +4.5%)
+2026-10-09 19:00:49,717  INFO    MLEG limit close succeeded — 3 legs
+2026-10-09 19:00:49,717  INFO    All 4/4 legs closed/expired successfully.
+2026-10-09 19:00:49,717  INFO    Closed: profit_target  P&L=$161.50  |  cumulative=$615.00  trades=12
+2026-10-09 19:00:49,717  INFO  Checking entry opportunities...
+2026-10-09 19:00:49,717  INFO    Slot IWM_D: most recent IWM entry was 2026-10-08 (open or closed) — stagger gate until 2026-10-15 (7d)
+2026-10-09 19:00:49,719  INFO  State saved.
+2026-10-09 19:00:49,719  INFO  ------------------------------------------------------------
+2026-10-09 19:00:49,719  INFO    Slot IWM_A (IWM 17.5%): OPEN — iron_condor  1 contracts  DTE=21  credit=$2.58
+2026-10-09 19:00:49,719  INFO    Slot IWM_B (IWM 17.5%): OPEN — iron_condor  1 contracts  DTE=28  credit=$2.49
+2026-10-09 19:00:49,719  INFO    Slot IWM_C (IWM 17.5%): OPEN — iron_condor  1 contracts  DTE=7  credit=$2.02
+2026-10-09 19:00:49,719  INFO    Slot IWM_D (IWM 17.5%): EMPTY  next: 2026-10-15
+2026-10-09 19:00:49,719  INFO    Portfolio: $9,651  |  Cash reserve ~20%
+2026-10-09 19:00:49,719  INFO  Generating daily live diagrams...
+2026-10-09 19:00:50,072  INFO  Failed to extract font properties from /usr/share/fonts/truetype/noto/NotoColorEmoji.ttf: Non-scalable fonts are not supported
+2026-10-09 19:00:50,085  INFO  generated new fontManager
+2026-10-09 19:00:51,453  INFO    Live diagram saved: diagrams/2026-10-09_IWM_A_live.png  (P&L +$125, 48% captured)
+2026-10-09 19:00:52,374  INFO    Live diagram saved: diagrams/2026-10-09_IWM_C_live.png  (P&L +$116, 57% captured)
+2026-10-09 19:00:53,392  INFO    Live diagram saved: diagrams/2026-10-09_IWM_B_live.png  (P&L +$22, 9% captured)
+2026-10-09 19:00:53,392  INFO  Generating portfolio equity chart...
+2026-10-09 19:00:53,759  INFO    Portfolio chart saved: diagrams/portfolio_equity.png  (value=$9,651, PnL=+$651)
+2026-10-09 19:00:53,760  INFO  Done.
