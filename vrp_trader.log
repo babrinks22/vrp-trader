@@ -4604,3 +4604,40 @@
 2026-11-04 20:32:23,978  INFO  Generating portfolio equity chart...
 2026-11-04 20:32:24,366  INFO    Portfolio chart saved: diagrams/portfolio_equity.png  (value=$10,044, PnL=+$1,044)
 2026-11-04 20:32:24,367  INFO  Done.
+2026-11-05 20:49:05,945  INFO  ============================================================
+2026-11-05 20:49:05,945  INFO  VRP Live Trader — 2026-11-05  LIVE
+2026-11-05 20:49:05,945  INFO  ============================================================
+2026-11-05 20:49:06,087  INFO  Portfolio (last equity):   $10,282.21  (Live)
+2026-11-05 20:49:06,087  INFO  Portfolio (live MTM):      $9,899.21  (not used for sizing — includes option bid-ask drag)
+2026-11-05 20:49:06,087  INFO  Checking for assignments...
+2026-11-05 20:49:06,136  INFO    Assignment check: no stock positions found — all clear
+2026-11-05 20:49:06,137  INFO  Computing regimes...
+2026-11-05 20:49:06,823  INFO    IWM: Trend=bearish  Vol=high  ATR=expanding  → regime_dispatched
+2026-11-05 20:49:06,823  INFO      $271.23  VIX=25.9  HV=23.2%  RSI=39.2  fresh_VIX_high=True
+2026-11-05 20:49:06,823  INFO  Managing open positions...
+2026-11-05 20:49:06,823  INFO    Slot IWM_A: iron_condor  DTE=15  held=14d  credit=$2.31
+2026-11-05 20:49:07,017  INFO    Slot IWM_B: iron_condor  DTE=22  held=7d  credit=$1.99
+2026-11-05 20:49:07,105  INFO    Slot IWM_C: iron_condor  DTE=8  held=21d  credit=$2.31
+2026-11-05 20:49:07,186  INFO    Slot IWM_D: no open position
+2026-11-05 20:49:07,186  INFO  Checking entry opportunities...
+2026-11-05 20:49:07,220  INFO    Slot IWM_D: select_strategy → iron_condor  put_delta=0.20  call_delta=0.20  (RSI=39.2, vix_fresh_high=True)
+2026-11-05 20:49:07,386  INFO    Slot IWM_D: entering iron_condor  regime=bearish+high+expanding  rfr=3.99%  iv_est=0.274  target_expiry=2026-12-05
+2026-11-05 20:49:07,468  INFO    IV refined: HV-est=0.274 → implied=0.297 (from probe IWM261204P00255000 mid=$2.85)
+2026-11-05 20:49:08,175  WARNING    find_contract: no contract near $315 passed bid-ask filter (max 30%) — using fallback IWM261204C00315000 anyway (bid=0.01 ask=0.07)
+2026-11-05 20:49:08,176  INFO    Slot IWM_D: credit $2.430 is only 11.0% of the $22.0 wing — below the 12.0% minimum for iron_condor. Skipping — retry tomorrow.
+2026-11-05 20:49:08,202  INFO  State saved.
+2026-11-05 20:49:08,202  INFO  ------------------------------------------------------------
+2026-11-05 20:49:08,202  INFO    Slot IWM_A (IWM 17.5%): OPEN — iron_condor  1 contracts  DTE=15  credit=$2.31
+2026-11-05 20:49:08,202  INFO    Slot IWM_B (IWM 17.5%): OPEN — iron_condor  1 contracts  DTE=22  credit=$1.99
+2026-11-05 20:49:08,202  INFO    Slot IWM_C (IWM 17.5%): OPEN — iron_condor  1 contracts  DTE=8  credit=$2.31
+2026-11-05 20:49:08,202  INFO    Slot IWM_D (IWM 17.5%): EMPTY  next: 2026-11-06
+2026-11-05 20:49:08,202  INFO    Portfolio: $10,282  |  Cash reserve ~20%
+2026-11-05 20:49:08,202  INFO  Generating daily live diagrams...
+2026-11-05 20:49:08,537  INFO  Failed to extract font properties from /usr/share/fonts/truetype/noto/NotoColorEmoji.ttf: Non-scalable fonts are not supported
+2026-11-05 20:49:08,601  INFO  generated new fontManager
+2026-11-05 20:49:09,481  INFO    Live diagram saved: diagrams/2026-11-05_IWM_A_live.png  (P&L +$23, 10% captured)
+2026-11-05 20:49:10,121  INFO    Live diagram saved: diagrams/2026-11-05_IWM_C_live.png  (P&L +$80, 35% captured)
+2026-11-05 20:49:10,887  INFO    Live diagram saved: diagrams/2026-11-05_IWM_B_live.png  (P&L $-205, -103% captured)
+2026-11-05 20:49:10,887  INFO  Generating portfolio equity chart...
+2026-11-05 20:49:11,111  INFO    Portfolio chart saved: diagrams/portfolio_equity.png  (value=$10,282, PnL=+$1,282)
+2026-11-05 20:49:11,112  INFO  Done.
