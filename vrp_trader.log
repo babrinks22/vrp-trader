@@ -4822,3 +4822,48 @@
 2026-11-12 21:05:29,084  INFO  Generating portfolio equity chart...
 2026-11-12 21:05:29,329  INFO    Portfolio chart saved: diagrams/portfolio_equity.png  (value=$10,486, PnL=+$1,486)
 2026-11-12 21:05:29,329  INFO  Done.
+2026-11-13 20:39:01,686  INFO  ============================================================
+2026-11-13 20:39:01,686  INFO  VRP Live Trader — 2026-11-13  LIVE
+2026-11-13 20:39:01,686  INFO  ============================================================
+2026-11-13 20:39:01,952  INFO  Portfolio (last equity):   $10,448.05  (Live)
+2026-11-13 20:39:01,952  INFO  Portfolio (live MTM):      $10,452.05  (not used for sizing — includes option bid-ask drag)
+2026-11-13 20:39:01,953  INFO  Checking for assignments...
+2026-11-13 20:39:02,021  INFO    Assignment check: no stock positions found — all clear
+2026-11-13 20:39:02,021  INFO  Computing regimes...
+2026-11-13 20:39:02,581  INFO    IWM: Trend=neutral  Vol=low  ATR=expanding  → regime_dispatched
+2026-11-13 20:39:02,581  INFO      $277.11  VIX=19.0  HV=25.2%  RSI=47.3  fresh_VIX_high=False
+2026-11-13 20:39:02,581  INFO  Managing open positions...
+2026-11-13 20:39:02,581  INFO    Slot IWM_A: no open position
+2026-11-13 20:39:02,581  INFO    Slot IWM_B: iron_condor  DTE=14  held=15d  credit=$1.99
+2026-11-13 20:39:02,880  INFO    Slot IWM_C: no open position
+2026-11-13 20:39:02,881  INFO    Slot IWM_D: no open position
+2026-11-13 20:39:02,881  INFO  Checking entry opportunities...
+2026-11-13 20:39:02,957  INFO    Slot IWM_A: select_strategy → iron_condor  put_delta=0.20  call_delta=0.20  (RSI=47.3, vix_fresh_high=False)
+2026-11-13 20:39:03,103  INFO    Slot IWM_A: entering iron_condor  regime=neutral+low+expanding  rfr=4.12%  iv_est=0.297  target_expiry=2026-12-13
+2026-11-13 20:39:03,301  INFO    IV refined: HV-est=0.297 → implied=0.230 (from probe IWM261211P00260000 mid=$1.42)
+2026-11-13 20:39:04,788  INFO    find_contract: skipped IWM261211C00313000 (wide spread) → picked IWM261211C00309000 (spread 26% ≤ 30%)
+2026-11-13 20:39:04,788  INFO    Slot IWM_A: credit $1.805 is only 10.0% of the $18.0 wing — below the 12.0% minimum for iron_condor. Skipping — retry tomorrow.
+2026-11-13 20:39:04,858  INFO    Slot IWM_C: select_strategy → iron_condor  put_delta=0.20  call_delta=0.20  (RSI=47.3, vix_fresh_high=False)
+2026-11-13 20:39:04,859  INFO    Slot IWM_C: entering iron_condor  regime=neutral+low+expanding  rfr=4.12%  iv_est=0.297  target_expiry=2026-12-13
+2026-11-13 20:39:05,068  INFO    IV refined: HV-est=0.297 → implied=0.227 (from probe IWM261211P00260000 mid=$1.38)
+2026-11-13 20:39:06,252  INFO    find_contract: skipped IWM261211C00311000 (wide spread) → picked IWM261211C00309000 (spread 26% ≤ 30%)
+2026-11-13 20:39:06,252  INFO    Slot IWM_C: credit $1.865 is only 11.0% of the $17.0 wing — below the 12.0% minimum for iron_condor. Skipping — retry tomorrow.
+2026-11-13 20:39:06,333  INFO    Slot IWM_D: select_strategy → iron_condor  put_delta=0.20  call_delta=0.20  (RSI=47.3, vix_fresh_high=False)
+2026-11-13 20:39:06,333  INFO    Slot IWM_D: entering iron_condor  regime=neutral+low+expanding  rfr=4.12%  iv_est=0.297  target_expiry=2026-12-13
+2026-11-13 20:39:06,554  INFO    IV refined: HV-est=0.297 → implied=0.227 (from probe IWM261211P00260000 mid=$1.38)
+2026-11-13 20:39:07,666  INFO    find_contract: skipped IWM261211C00311000 (wide spread) → picked IWM261211C00309000 (spread 26% ≤ 30%)
+2026-11-13 20:39:07,666  INFO    Slot IWM_D: credit $1.865 is only 11.0% of the $17.0 wing — below the 12.0% minimum for iron_condor. Skipping — retry tomorrow.
+2026-11-13 20:39:07,667  INFO  State saved.
+2026-11-13 20:39:07,668  INFO  ------------------------------------------------------------
+2026-11-13 20:39:07,668  INFO    Slot IWM_A (IWM 17.5%): EMPTY  next: 2026-11-16
+2026-11-13 20:39:07,668  INFO    Slot IWM_B (IWM 17.5%): OPEN — iron_condor  1 contracts  DTE=14  credit=$1.99
+2026-11-13 20:39:07,668  INFO    Slot IWM_C (IWM 17.5%): EMPTY  next: 2026-11-16
+2026-11-13 20:39:07,668  INFO    Slot IWM_D (IWM 17.5%): EMPTY  next: 2026-11-16
+2026-11-13 20:39:07,668  INFO    Portfolio: $10,448  |  Cash reserve ~20%
+2026-11-13 20:39:07,668  INFO  Generating daily live diagrams...
+2026-11-13 20:39:08,027  INFO  Failed to extract font properties from /usr/share/fonts/truetype/noto/NotoColorEmoji.ttf: Non-scalable fonts are not supported
+2026-11-13 20:39:08,099  INFO  generated new fontManager
+2026-11-13 20:39:09,591  INFO    Live diagram saved: diagrams/2026-11-13_IWM_B_live.png  (P&L +$60, 30% captured)
+2026-11-13 20:39:09,591  INFO  Generating portfolio equity chart...
+2026-11-13 20:39:10,042  INFO    Portfolio chart saved: diagrams/portfolio_equity.png  (value=$10,448, PnL=+$1,448)
+2026-11-13 20:39:10,042  INFO  Done.
