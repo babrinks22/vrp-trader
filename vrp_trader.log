@@ -4966,3 +4966,36 @@
 2026-11-18 21:35:21,644  INFO  Generating portfolio equity chart...
 2026-11-18 21:35:21,897  INFO    Portfolio chart saved: diagrams/portfolio_equity.png  (value=$10,144, PnL=+$1,144)
 2026-11-18 21:35:21,897  INFO  Done.
+2026-11-19 21:47:45,736  INFO  ============================================================
+2026-11-19 21:47:45,736  INFO  VRP Live Trader — 2026-11-19  LIVE
+2026-11-19 21:47:45,736  INFO  ============================================================
+2026-11-19 21:47:45,798  INFO  Portfolio (last equity):   $10,234.05  (Live)
+2026-11-19 21:47:45,798  INFO  Portfolio (live MTM):      $9,818.05  (not used for sizing — includes option bid-ask drag)
+2026-11-19 21:47:45,798  INFO  Checking for assignments...
+2026-11-19 21:47:45,812  INFO    Assignment check: no stock positions found — all clear
+2026-11-19 21:47:45,812  INFO  Computing regimes...
+2026-11-19 21:47:46,325  INFO    IWM: Trend=bearish  Vol=high  ATR=contracting  → regime_dispatched
+2026-11-19 21:47:46,325  INFO      $264.22  VIX=28.4  HV=26.7%  RSI=35.5  fresh_VIX_high=True
+2026-11-19 21:47:46,325  INFO  Managing open positions...
+2026-11-19 21:47:46,325  INFO    Slot IWM_A: no open position
+2026-11-19 21:47:46,325  INFO    Slot IWM_B: iron_condor  DTE=8  held=21d  credit=$1.99
+2026-11-19 21:47:46,378  INFO    Slot IWM_C: no open position
+2026-11-19 21:47:46,378  INFO    Slot IWM_D: no open position
+2026-11-19 21:47:46,378  INFO  Checking entry opportunities...
+2026-11-19 21:47:46,378  INFO    Slot IWM_A: market closed — skipping entry, will retry next run
+2026-11-19 21:47:46,378  INFO    Slot IWM_C: market closed — skipping entry, will retry next run
+2026-11-19 21:47:46,379  INFO    Slot IWM_D: market closed — skipping entry, will retry next run
+2026-11-19 21:47:46,380  INFO  State saved.
+2026-11-19 21:47:46,380  INFO  ------------------------------------------------------------
+2026-11-19 21:47:46,380  INFO    Slot IWM_A (IWM 17.5%): EMPTY  next: 2026-11-20
+2026-11-19 21:47:46,380  INFO    Slot IWM_B (IWM 17.5%): OPEN — iron_condor  1 contracts  DTE=8  credit=$1.99
+2026-11-19 21:47:46,380  INFO    Slot IWM_C (IWM 17.5%): EMPTY  next: 2026-11-20
+2026-11-19 21:47:46,380  INFO    Slot IWM_D (IWM 17.5%): EMPTY  next: 2026-11-20
+2026-11-19 21:47:46,380  INFO    Portfolio: $10,234  |  Cash reserve ~20%
+2026-11-19 21:47:46,380  INFO  Generating daily live diagrams...
+2026-11-19 21:47:46,725  INFO  Failed to extract font properties from /usr/share/fonts/truetype/noto/NotoColorEmoji.ttf: Non-scalable fonts are not supported
+2026-11-19 21:47:46,881  INFO  generated new fontManager
+2026-11-19 21:47:48,262  INFO    Live diagram saved: diagrams/2026-11-19_IWM_B_live.png  (P&L $-432, -217% captured)
+2026-11-19 21:47:48,262  INFO  Generating portfolio equity chart...
+2026-11-19 21:47:48,709  INFO    Portfolio chart saved: diagrams/portfolio_equity.png  (value=$10,234, PnL=+$1,234)
+2026-11-19 21:47:48,709  INFO  Done.
