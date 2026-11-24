@@ -5032,3 +5032,62 @@
 2026-11-20 21:31:39,867  INFO  Generating portfolio equity chart...
 2026-11-20 21:31:40,314  INFO    Portfolio chart saved: diagrams/portfolio_equity.png  (value=$9,846, PnL=+$846)
 2026-11-20 21:31:40,314  INFO  Done.
+2026-11-24 01:11:42,922  INFO  ============================================================
+2026-11-24 01:11:42,922  INFO  VRP Live Trader — 2026-11-24  LIVE
+2026-11-24 01:11:42,922  INFO  ============================================================
+2026-11-24 01:11:43,055  INFO  Portfolio (last equity):   $9,109.99  (Live)
+2026-11-24 01:11:43,055  INFO  Portfolio (live MTM):      $9,551.99  (not used for sizing — includes option bid-ask drag)
+2026-11-24 01:11:43,056  INFO  Checking for assignments...
+2026-11-24 01:11:43,095  INFO    Assignment check: no stock positions found — all clear
+2026-11-24 01:11:43,095  INFO  Computing regimes...
+2026-11-24 01:11:44,012  INFO    IWM: Trend=bearish  Vol=mid  ATR=contracting  → regime_dispatched
+2026-11-24 01:11:44,012  INFO      $256.61  VIX=26.6  HV=28.3%  RSI=30.2  fresh_VIX_high=False
+2026-11-24 01:11:44,012  INFO  Managing open positions...
+2026-11-24 01:11:44,012  INFO    Slot IWM_A: no open position
+2026-11-24 01:11:44,012  INFO    Slot IWM_B: iron_condor  DTE=3  held=26d  credit=$1.99
+2026-11-24 01:11:44,012  INFO    Slot IWM_B: DTE exit (dte=3)
+2026-11-24 01:11:44,052  INFO    Leg IWM261127C00299000: value $0.010/share < $0.03 — letting expire worthless
+2026-11-24 01:11:44,052  INFO    Leg IWM261127C00315000: value $0.000/share < $0.03 — letting expire worthless
+2026-11-24 01:11:44,271  INFO    Close order submitted: d32aaebf-981f-4231-a17c-fe20cdb33e48  debit limit=$5.35  qty=1  attempt=1/3
+2026-11-24 01:11:59,312  INFO    Close order status=orderstatus.accepted (poll 1/3, waiting 15s...)
+2026-11-24 01:12:14,355  INFO    Close order status=orderstatus.accepted (poll 2/3, waiting 15s...)
+2026-11-24 01:12:29,396  INFO    Close order status=orderstatus.accepted (poll 3/3, waiting 15s...)
+2026-11-24 01:12:31,475  INFO    Order d32aaebf-981f-4231-a17c-fe20cdb33e48 reached terminal state 'orderstatus.canceled' — contracts released
+2026-11-24 01:12:31,475  INFO    Close not filled — conceding $0.05 more, new debit limit $5.40 (attempt 2/3)
+2026-11-24 01:12:31,517  INFO    Close order submitted: 142668d6-8a5c-4a84-bb0e-5e0078d861a5  debit limit=$5.40  qty=1  attempt=2/3
+2026-11-24 01:12:46,556  INFO    Close order status=orderstatus.accepted (poll 1/3, waiting 15s...)
+2026-11-24 01:13:01,597  INFO    Close order status=orderstatus.accepted (poll 2/3, waiting 15s...)
+2026-11-24 01:13:16,636  INFO    Close order status=orderstatus.accepted (poll 3/3, waiting 15s...)
+2026-11-24 01:13:18,715  INFO    Order 142668d6-8a5c-4a84-bb0e-5e0078d861a5 reached terminal state 'orderstatus.canceled' — contracts released
+2026-11-24 01:13:18,715  INFO    Close not filled — conceding $0.05 more, new debit limit $5.45 (attempt 3/3)
+2026-11-24 01:13:18,760  INFO    Close order submitted: de1fdaae-fb82-4993-8a03-ca9ab69cce48  debit limit=$5.45  qty=1  attempt=3/3
+2026-11-24 01:13:33,803  INFO    Close order status=orderstatus.accepted (poll 1/3, waiting 15s...)
+2026-11-24 01:13:48,841  INFO    Close order status=orderstatus.accepted (poll 2/3, waiting 15s...)
+2026-11-24 01:14:03,881  INFO    Close order status=orderstatus.accepted (poll 3/3, waiting 15s...)
+2026-11-24 01:14:05,958  INFO    Order de1fdaae-fb82-4993-8a03-ca9ab69cce48 reached terminal state 'orderstatus.canceled' — contracts released
+2026-11-24 01:14:05,958  WARNING    Close MLEG limit not filled after 3 attempts — order cancelled, caller will fall back to market orders
+2026-11-24 01:14:05,958  WARNING    Falling back to per-leg market orders for close (shorts first, then longs)
+2026-11-24 01:14:09,070  ERROR    Failed to close IWM261127P00271000 after 3 attempts: {"code":42210000,"message":"options market orders are only allowed during market hours"}
+2026-11-24 01:14:12,182  ERROR    Failed to close IWM261127P00255000 after 3 attempts: {"code":42210000,"message":"options market orders are only allowed during market hours"}
+2026-11-24 01:14:12,182  WARNING    Partial close: 2/4 legs closed. Failed: ['IWM261127P00271000', 'IWM261127P00255000']. Freeing slot anyway — check Alpaca manually for remaining legs.
+2026-11-24 01:14:12,300  INFO    Closed: dte_exit_partial  P&L=$-337.00  |  cumulative=$1,063.00  trades=18
+2026-11-24 01:14:12,300  INFO    Slot IWM_C: no open position
+2026-11-24 01:14:12,300  INFO    Slot IWM_D: no open position
+2026-11-24 01:14:12,300  INFO  Checking entry opportunities...
+2026-11-24 01:14:12,300  INFO    Slot IWM_A: market closed — skipping entry, will retry next run
+2026-11-24 01:14:12,300  INFO    Slot IWM_B: gated until 2026-11-25
+2026-11-24 01:14:12,300  INFO    Slot IWM_C: market closed — skipping entry, will retry next run
+2026-11-24 01:14:12,300  INFO    Slot IWM_D: market closed — skipping entry, will retry next run
+2026-11-24 01:14:12,302  INFO  State saved.
+2026-11-24 01:14:12,302  INFO  ------------------------------------------------------------
+2026-11-24 01:14:12,303  INFO    Slot IWM_A (IWM 17.5%): EMPTY  next: 2026-11-25
+2026-11-24 01:14:12,303  INFO    Slot IWM_B (IWM 17.5%): EMPTY  next: 2026-11-25
+2026-11-24 01:14:12,303  INFO    Slot IWM_C (IWM 17.5%): EMPTY  next: 2026-11-25
+2026-11-24 01:14:12,303  INFO    Slot IWM_D (IWM 17.5%): EMPTY  next: 2026-11-25
+2026-11-24 01:14:12,303  INFO    Portfolio: $9,110  |  Cash reserve ~20%
+2026-11-24 01:14:12,303  INFO  Generating daily live diagrams...
+2026-11-24 01:14:12,583  INFO  Failed to extract font properties from /usr/share/fonts/truetype/noto/NotoColorEmoji.ttf: Non-scalable fonts are not supported
+2026-11-24 01:14:12,721  INFO  generated new fontManager
+2026-11-24 01:14:12,840  INFO  Generating portfolio equity chart...
+2026-11-24 01:14:13,071  INFO    Portfolio chart saved: diagrams/portfolio_equity.png  (value=$9,110, PnL=+$110)
+2026-11-24 01:14:13,071  INFO  Done.
