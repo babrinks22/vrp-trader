@@ -2,7 +2,7 @@
   "slots": {
     "IWM_A": {
       "position": null,
-      "next_entry": "2026-11-25",
+      "next_entry": "2026-11-27",
       "closed_trades": [
         {
           "entry_date": "2026-05-26",
@@ -271,7 +271,7 @@
     },
     "IWM_C": {
       "position": null,
-      "next_entry": "2026-11-25",
+      "next_entry": "2026-11-27",
       "closed_trades": [
         {
           "entry_date": "2026-06-04",
@@ -410,7 +410,7 @@
     },
     "IWM_B": {
       "position": null,
-      "next_entry": "2026-11-25",
+      "next_entry": "2026-11-27",
       "closed_trades": [
         {
           "entry_date": "2026-07-30",
@@ -552,7 +552,7 @@
     },
     "IWM_D": {
       "position": null,
-      "next_entry": "2026-11-25",
+      "next_entry": "2026-11-27",
       "closed_trades": [
         {
           "entry_date": "2026-08-21",
@@ -1146,6 +1146,10 @@
     {
       "date": "2026-11-24",
       "value": 9574.99
+    },
+    {
+      "date": "2026-11-25",
+      "value": 9695.99
     }
   ],
   "seen_assignments": []
