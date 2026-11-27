@@ -5190,3 +5190,36 @@
 2026-11-26 22:34:49,235  INFO  Generating portfolio equity chart...
 2026-11-26 22:34:49,563  INFO    Portfolio chart saved: diagrams/portfolio_equity.png  (value=$9,822, PnL=+$822)
 2026-11-26 22:34:49,563  INFO  Done.
+2026-11-27 22:19:14,439  INFO  ============================================================
+2026-11-27 22:19:14,439  INFO  VRP Live Trader — 2026-11-27  LIVE
+2026-11-27 22:19:14,439  INFO  ============================================================
+2026-11-27 22:19:14,489  INFO  Portfolio (last equity):   $9,821.99  (Live)
+2026-11-27 22:19:14,489  INFO  Portfolio (live MTM):      $10,101.93  (not used for sizing — includes option bid-ask drag)
+2026-11-27 22:19:14,489  INFO  Checking for assignments...
+2026-11-27 22:19:14,501  INFO    Assignment check: no stock positions found — all clear
+2026-11-27 22:19:14,501  INFO  Computing regimes...
+2026-11-27 22:19:14,991  INFO    IWM: Trend=neutral  Vol=mid  ATR=contracting  → regime_dispatched
+2026-11-27 22:19:14,991  INFO      $273.79  VIX=23.8  HV=31.3%  RSI=50.5  fresh_VIX_high=False
+2026-11-27 22:19:14,991  INFO  Managing open positions...
+2026-11-27 22:19:14,991  INFO    Slot IWM_A: no open position
+2026-11-27 22:19:14,991  INFO    Slot IWM_B: no open position
+2026-11-27 22:19:14,991  INFO    Slot IWM_C: no open position
+2026-11-27 22:19:14,991  INFO    Slot IWM_D: no open position
+2026-11-27 22:19:14,992  INFO  Checking entry opportunities...
+2026-11-27 22:19:14,992  INFO    Slot IWM_A: market closed — skipping entry, will retry next run
+2026-11-27 22:19:14,992  INFO    Slot IWM_B: market closed — skipping entry, will retry next run
+2026-11-27 22:19:14,992  INFO    Slot IWM_C: market closed — skipping entry, will retry next run
+2026-11-27 22:19:14,992  INFO    Slot IWM_D: market closed — skipping entry, will retry next run
+2026-11-27 22:19:14,993  INFO  State saved.
+2026-11-27 22:19:14,993  INFO  ------------------------------------------------------------
+2026-11-27 22:19:14,993  INFO    Slot IWM_A (IWM 17.5%): EMPTY  next: 2026-11-30
+2026-11-27 22:19:14,993  INFO    Slot IWM_B (IWM 17.5%): EMPTY  next: 2026-11-30
+2026-11-27 22:19:14,993  INFO    Slot IWM_C (IWM 17.5%): EMPTY  next: 2026-11-30
+2026-11-27 22:19:14,993  INFO    Slot IWM_D (IWM 17.5%): EMPTY  next: 2026-11-30
+2026-11-27 22:19:14,993  INFO    Portfolio: $9,822  |  Cash reserve ~20%
+2026-11-27 22:19:14,993  INFO  Generating daily live diagrams...
+2026-11-27 22:19:15,237  INFO  Failed to extract font properties from /usr/share/fonts/truetype/noto/NotoColorEmoji.ttf: Non-scalable fonts are not supported
+2026-11-27 22:19:15,278  INFO  generated new fontManager
+2026-11-27 22:19:15,429  INFO  Generating portfolio equity chart...
+2026-11-27 22:19:15,756  INFO    Portfolio chart saved: diagrams/portfolio_equity.png  (value=$9,822, PnL=+$822)
+2026-11-27 22:19:15,756  INFO  Done.
